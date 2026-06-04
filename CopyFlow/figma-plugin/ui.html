@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-secondary: #94a3b8;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --border: #334155;
+      --input-bg: #0f172a;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 16px;
+      font-size: 13px;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+
+    h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 0 0 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%;
+      box-sizing: border-box;
+      background-color: var(--input-bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn {
+      width: 100%;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--border);
+    }
+
+    .selection-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      background-color: var(--border);
+      color: var(--text-secondary);
+      width: fit-content;
+    }
+
+    .status-badge.active {
+      background-color: rgba(99, 102, 241, 0.2);
+      color: var(--primary);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    .flex-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .flex-row > * {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .stage-selector {
+      display: flex;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2px;
+      margin-bottom: 12px;
+    }
+
+    .stage-option {
+      flex: 1;
+      text-align: center;
+      padding: 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .stage-option.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .console {
+      flex-grow: 1;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      overflow-y: auto;
+      max-height: 140px;
+    }
+
+    .log-line {
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+
+    .log-info { color: var(--text-secondary); }
+    .log-success { color: var(--success); }
+    .log-warning { color: var(--warning); }
+
+    /* Key Explorer Styles */
+    .keys-list-container {
+      max-height: 140px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      background-color: var(--input-bg);
+      border-radius: 8px;
+      margin-top: 4px;
+    }
+
+    .key-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+
+    .key-item:last-child {
+      border-bottom: none;
+    }
+
+    .key-item:hover {
+      background-color: var(--border);
+    }
+
+    .key-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-grow: 1;
+      margin-right: 8px;
+    }
+
+    .key-status {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .key-status.bound {
+      background-color: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+    }
+
+    .key-status.unbound {
+      background-color: rgba(148, 163, 184, 0.1);
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <h2>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    CopyFlow Sync
+  </h2>
+
+  <!-- Selection / Binding Card -->
+  <div class="card">
+    <label>Current Selection</label>
+    <div id="selection-state" class="selection-panel">
+      <div class="log-info">Select a single text layer in Figma to bind a copy key.</div>
+    </div>
+    
+    <div id="binding-form" style="display: none; margin-top: 10px;">
+      <div class="flex-row">
+        <input type="text" id="bind-key-input" placeholder="e.g. landing.hero.title" style="margin-bottom: 0;">
+        <button id="btn-bind" class="btn" style="width: auto; padding-left: 16px; padding-right: 16px;">Bind</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Explorer Card -->
+  <div class="card" style="padding-bottom: 8px;">
+    <label>Copy Key Explorer</label>
+    <input type="text" id="search-input" placeholder="🔍 Search copy keys..." style="margin-bottom: 0;">
+    <div id="keys-list" class="keys-list-container">
+      <div class="log-line log-info" style="padding: 12px; text-align: center;">Loading keys...</div>
+    </div>
+  </div>
+
+  <!-- Sync Controls Card -->
+  <div class="card">
+    <label>Sync Server URL</label>
+    <input type="text" id="server-url" value="http://localhost:3000" placeholder="e.g. http://localhost:3000">
+
+    <label>Google Sheet ID</label>
+    <input type="text" id="sheet-id" value="" placeholder="Leave blank to use server defaults/mock">
+    
+    <label>Target Staging Environment</label>
+    <div class="stage-selector">
+      <div class="stage-option active" data-stage="draft">Draft</div>
+      <div class="stage-option" data-stage="approved">Approved</div>
+    </div>
+
+    <button id="btn-sync" class="btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+      Sync to Figma
+    </button>
+  </div>
+
+  <!-- Realtime Console Log -->
+  <label>Activity Log</label>
+  <div class="console" id="console">
+    <div class="log-line log-info">CopyFlow loaded. Waiting for commands...</div>
+  </div>
+
+  <script>
+    let activeStage = 'draft';
+    let selectedNodeId = null;
+    let availableKeys = []; // Array of string keys fetched from server
+    let boundKeysList = []; // Array of string keys bound in Figma
+
+    // Load configurations safely from localStorage if they exist (prevents iframe SecurityError)
+    try {
+      if (localStorage.getItem('copyflow-server-url')) {
+        document.getElementById('server-url').value = localStorage.getItem('copyflow-server-url');
+      }
+      if (localStorage.getItem('copyflow-sheet-id')) {
+        document.getElementById('sheet-id').value = localStorage.getItem('copyflow-sheet-id');
+      }
+    } catch (e) {
+      console.warn("localStorage is blocked in this sandbox:", e.message);
+    }
+
+    // Initialize: Try to fetch default keys list
+    fetchKeysList();
+
+    // Tab Switcher
+    const options = document.querySelectorAll('.stage-option');
+    options.forEach(opt => {
+      opt.addEventListener('click', () => {
+        options.forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        activeStage = opt.dataset.stage;
+        log(`Switched view target to "${activeStage.toUpperCase()}"`, 'info');
+      });
+    });
+
+    // Search Filtering
+    document.getElementById('search-input').addEventListener('input', () => {
+      renderKeysExplorer();
+    });
+
+    // Logging helper
+    function log(message, level = 'info') {
+      const consoleEl = document.getElementById('console');
+      const line = document.createElement('div');
+      line.className = `log-line log-${level}`;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      consoleEl.appendChild(line);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    // Render Key Explorer List
+    function renderKeysExplorer() {
+      const container = document.getElementById('keys-list');
+      const query = document.getElementById('search-input').value.toLowerCase().trim();
+      
+      if (availableKeys.length === 0) {
+        container.innerHTML = `<div style="padding: 12px; text-align: center; color: var(--text-secondary);">No keys available. Connect to server.</div>`;
+        return;
+      }
+
+      const filtered = availableKeys.filter(k => k.toLowerCase().includes(query));
+      
+      if (filtered.length === 0) {
+        container.innerHTML = `<div style="padding: 12px; text-align: center; color: var(--text-secondary);">No matching keys found.</div>`;
+        return;
+      }
+
+      container.innerHTML = '';
+      filtered.forEach(key => {
+        const item = document.createElement('div');
+        item.className = 'key-item';
+        
+        const isBound = boundKeysList.includes(key);
+        
+        item.innerHTML = `
+          <div class="key-name" title="${escapeHtml(key)}">${escapeHtml(key)}</div>
+          <span class="key-status ${isBound ? 'bound' : 'unbound'}">${isBound ? 'Bound' : 'Unbound'}</span>
+        `;
+        
+        // Click to bind key to selected element
+        item.addEventListener('click', () => {
+          if (selectedNodeId) {
+            parent.postMessage({ pluginMessage: { type: 'bind-key', key } }, '*');
+          } else {
+            log(`Cannot bind "${key}". Please select a single text layer in Figma first.`, 'warning');
+          }
+        });
+        
+        container.appendChild(item);
+      });
+    }
+
+    // Helper to fetch keys list from sync server
+    async function fetchKeysList() {
+      const serverUrl = document.getElementById('server-url').value.trim();
+      const sheetId = document.getElementById('sheet-id').value.trim();
+      
+      let fetchUrl = `${serverUrl}/api/copy`;
+      if (sheetId) {
+        fetchUrl += `?sheetId=${encodeURIComponent(sheetId)}`;
+      }
+
+      try {
+        const res = await fetch(fetchUrl);
+        if (res.ok) {
+          const data = await res.json();
+          availableKeys = Object.keys(data);
+          renderKeysExplorer();
+        }
+      } catch (err) {
+        // Silent error on init, will alert during explicit sync
+      }
+    }
+
+    // Message handler from Figma main thread
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      if (msg.type === 'selection-changed') {
+        const selectionState = document.getElementById('selection-state');
+        const bindingForm = document.getElementById('binding-form');
+        const bindKeyInput = document.getElementById('bind-key-input');
+
+        boundKeysList = msg.boundKeys || [];
+        renderKeysExplorer();
+
+        if (msg.selected) {
+          selectedNodeId = msg.nodeId;
+          selectionState.innerHTML = `
+            <div style="font-weight: 600; margin-bottom: 2px;">${escapeHtml(msg.nodeName)}</div>
+            <div style="font-size: 11px; color: var(--text-secondary);">Current text: "${escapeHtml(msg.currentText.substring(0, 40))}${msg.currentText.length > 40 ? '...' : ''}"</div>
+            ${msg.key ? `<div class="status-badge active" style="margin-top: 6px;">Key: ${escapeHtml(msg.key)}</div>` : '<div class="status-badge" style="margin-top: 6px;">Unbound</div>'}
+          `;
+          bindingForm.style.display = 'block';
+          bindKeyInput.value = msg.key || '';
+        } else {
+          selectedNodeId = null;
+          selectionState.innerHTML = `<div class="log-info">Select a single text layer in Figma to bind a copy key.</div>`;
+          bindingForm.style.display = 'none';
+        }
+      }
+
+      if (msg.type === 'log') {
+        log(msg.message, msg.level);
+      }
+
+      if (msg.type === 'sync-complete') {
+        log(`Sync finished. Updated ${msg.updatedCount} layers. Warnings: ${msg.overflowCount}`, 'success');
+        // Refresh bound keys after sync
+        fetchKeysList();
+      }
+    };
+
+    // Bind action (Manual Input fallback)
+    document.getElementById('btn-bind').addEventListener('click', () => {
+      const key = document.getElementById('bind-key-input').value.trim();
+      if (!key) return;
+      parent.postMessage({ pluginMessage: { type: 'bind-key', key } }, '*');
+    });
+
+    // Fetch and Sync action
+    document.getElementById('btn-sync').addEventListener('click', async () => {
+      const serverUrl = document.getElementById('server-url').value.trim();
+      const sheetId = document.getElementById('sheet-id').value.trim();
+
+      try {
+        localStorage.setItem('copyflow-server-url', serverUrl);
+        localStorage.setItem('copyflow-sheet-id', sheetId);
+      } catch (e) {
+        // Ignore storage blockers
+      }
+
+      let fetchUrl = `${serverUrl}/api/copy`;
+      if (sheetId) {
+        fetchUrl += `?sheetId=${encodeURIComponent(sheetId)}`;
+      }
+
+      log(`Fetching copy from ${fetchUrl}...`, 'info');
+      try {
+        const res = await fetch(fetchUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        
+        const copyData = await res.json();
+        availableKeys = Object.keys(copyData);
+        log(`Fetched ${availableKeys.length} copy keys successfully. Syncing to layers...`, 'success');
+        
+        parent.postMessage({
+          pluginMessage: {
+            type: 'sync-layers',
+            copyData,
+            stage: activeStage
+          }
+        }, '*');
+      } catch (err) {
+        log(`Connection failed: ${err.message}. Make sure sync server is running.`, 'warning');
+      }
+    });
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>

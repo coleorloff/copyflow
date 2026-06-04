@@ -1,0 +1,16 @@
+{
+  "name": "CopyFlow for Figma",
+  "id": "figma-copyflow-sync",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": [
+    "figma"
+  ],
+  "networkAccess": {
+    "allowedDomains": [
+      "*"
+    ],
+    "reasoning": "Retrieve copy data from local server and Google Sheets API."
+  }
+}
