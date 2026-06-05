@@ -1,6 +1,8 @@
 const http = require('http');
 const https = require('https');
 const url = require('url');
+const fs = require('fs');
+const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 
@@ -106,6 +108,54 @@ function parseCsv(csvText) {
   return result;
 }
 
+function serveLocalFallback(res, fallbackDb) {
+  const localCsvPath = path.join(__dirname, 'copy.csv');
+  if (fs.existsSync(localCsvPath)) {
+    try {
+      const csvData = fs.readFileSync(localCsvPath, 'utf8');
+      const parsed = parseCsv(csvData);
+      console.log(`Serving copy from local fallback file: ${localCsvPath}`);
+      res.writeHead(200, { 'Content-Type': 'application/json', 'X-CopyFlow-Source': 'local-csv' });
+      res.end(JSON.stringify(parsed));
+      return;
+    } catch (err) {
+      console.error("Failed to read local copy.csv:", err.message);
+    }
+  }
+  
+  console.log("Serving hardcoded fallback mock database.");
+  res.writeHead(200, { 'Content-Type': 'application/json', 'X-CopyFlow-Source': 'mock' });
+  res.end(JSON.stringify(fallbackDb));
+}
+
+function serveLocalApprovedFallback(res, fallbackDb) {
+  const localCsvPath = path.join(__dirname, 'copy.csv');
+  if (fs.existsSync(localCsvPath)) {
+    try {
+      const csvData = fs.readFileSync(localCsvPath, 'utf8');
+      const parsed = parseCsv(csvData);
+      const approvedOnly = {};
+      for (const [key, val] of Object.entries(parsed)) {
+        approvedOnly[key] = val.approved || val.draft;
+      }
+      console.log(`Serving approved copy from local fallback file: ${localCsvPath}`);
+      res.writeHead(200, { 'Content-Type': 'application/json', 'X-CopyFlow-Source': 'local-csv' });
+      res.end(JSON.stringify(approvedOnly));
+      return;
+    } catch (err) {
+      console.error("Failed to read local copy.csv for approved endpoint:", err.message);
+    }
+  }
+  
+  const approvedOnly = {};
+  for (const [key, val] of Object.entries(fallbackDb)) {
+    approvedOnly[key] = val.approved;
+  }
+  console.log("Serving hardcoded fallback approved mock database.");
+  res.writeHead(200, { 'Content-Type': 'application/json', 'X-CopyFlow-Source': 'mock' });
+  res.end(JSON.stringify(approvedOnly));
+}
+
 const server = http.createServer((req, res) => {
   // Set CORS headers manually
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -120,18 +170,17 @@ const server = http.createServer((req, res) => {
   }
 
   const parsedUrl = url.parse(req.url, true);
-  const path = parsedUrl.pathname;
+  const pathName = parsedUrl.pathname;
   const sheetId = parsedUrl.query.sheetId || "18T7m-9xT_d2hKkU5Fk6q5p_rYQp77_O5zS5a417u7B0";
 
-  if (path === '/api/copy') {
+  if (pathName === '/api/copy') {
     const googleUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&_t=${Date.now()}`;
     
     https.get(googleUrl, (googleRes) => {
       let data = '';
       if (googleRes.statusCode !== 200) {
-        console.warn(`Failed to fetch Google Sheet. Status: ${googleRes.statusCode}. Serving mock data.`);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(localMockDatabase));
+        console.warn(`Failed to fetch Google Sheet. Status: ${googleRes.statusCode}. Falling back...`);
+        serveLocalFallback(res, localMockDatabase);
         return;
       }
 
@@ -143,28 +192,22 @@ const server = http.createServer((req, res) => {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(parsed));
         } catch (e) {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(localMockDatabase));
+          serveLocalFallback(res, localMockDatabase);
         }
       });
     }).on('error', (err) => {
       console.warn("Error fetching sheet:", err.message);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(localMockDatabase));
+      serveLocalFallback(res, localMockDatabase);
     });
 
-  } else if (path === '/api/copy/approved') {
+  } else if (pathName === '/api/copy/approved') {
     const googleUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&_t=${Date.now()}`;
 
     https.get(googleUrl, (googleRes) => {
       let data = '';
       if (googleRes.statusCode !== 200) {
-        const approvedOnly = {};
-        for (const [key, val] of Object.entries(localMockDatabase)) {
-          approvedOnly[key] = val.approved;
-        }
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(approvedOnly));
+        console.warn(`Failed to fetch Google Sheet for approved. Status: ${googleRes.statusCode}. Falling back...`);
+        serveLocalApprovedFallback(res, localMockDatabase);
         return;
       }
 
@@ -179,21 +222,12 @@ const server = http.createServer((req, res) => {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(approvedOnly));
         } catch (e) {
-          const approvedOnly = {};
-          for (const [key, val] of Object.entries(localMockDatabase)) {
-            approvedOnly[key] = val.approved;
-          }
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(approvedOnly));
+          serveLocalApprovedFallback(res, localMockDatabase);
         }
       });
-    }).on('error', () => {
-      const approvedOnly = {};
-      for (const [key, val] of Object.entries(localMockDatabase)) {
-        approvedOnly[key] = val.approved;
-      }
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(approvedOnly));
+    }).on('error', (err) => {
+      console.warn("Error fetching sheet for approved:", err.message);
+      serveLocalApprovedFallback(res, localMockDatabase);
     });
 
   } else {
