@@ -1,5 +1,5 @@
 // Show UI with comfortable dimensions
-figma.showUI(__html__, { width: 400, height: 540, themeColors: true });
+figma.showUI(__html__, { width: 400, height: 640, themeColors: true });
 
 // Listen for selection changes to update the UI
 figma.on("selectionchange", () => {

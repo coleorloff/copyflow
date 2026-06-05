@@ -232,8 +232,13 @@ const server = http.createServer((req, res) => {
     https.get(googleUrl, (googleRes) => {
       let data = '';
       if (googleRes.statusCode !== 200) {
-        console.warn(`Failed to fetch Google Sheet. Status: ${googleRes.statusCode}. Falling back...`);
-        serveLocalFallback(res, localMockDatabase);
+        let errData = '';
+        googleRes.on('data', (chunk) => { errData += chunk; });
+        googleRes.on('end', () => {
+          console.warn(`Failed to fetch Google Sheet. Status: ${googleRes.statusCode}. Error: ${errData}`);
+          res.writeHead(googleRes.statusCode, { 'Content-Type': 'application/json' });
+          res.end(errData || JSON.stringify({ error: { message: `Google Sheets API returned status ${googleRes.statusCode}` } }));
+        });
         return;
       }
 
@@ -251,12 +256,14 @@ const server = http.createServer((req, res) => {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(parsed));
         } catch (e) {
-          serveLocalFallback(res, localMockDatabase);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: { message: e.message } }));
         }
       });
     }).on('error', (err) => {
       console.warn("Error fetching sheet:", err.message);
-      serveLocalFallback(res, localMockDatabase);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: { message: err.message } }));
     });
 
   } else if (pathName === '/api/copy/approved') {
@@ -268,8 +275,13 @@ const server = http.createServer((req, res) => {
     https.get(googleUrl, (googleRes) => {
       let data = '';
       if (googleRes.statusCode !== 200) {
-        console.warn(`Failed to fetch Google Sheet for approved. Status: ${googleRes.statusCode}. Falling back...`);
-        serveLocalApprovedFallback(res, localMockDatabase);
+        let errData = '';
+        googleRes.on('data', (chunk) => { errData += chunk; });
+        googleRes.on('end', () => {
+          console.warn(`Failed to fetch Google Sheet for approved. Status: ${googleRes.statusCode}. Error: ${errData}`);
+          res.writeHead(googleRes.statusCode, { 'Content-Type': 'application/json' });
+          res.end(errData || JSON.stringify({ error: { message: `Google Sheets API returned status ${googleRes.statusCode}` } }));
+        });
         return;
       }
 
