@@ -267,14 +267,21 @@
     <div id="binding-form" style="display: none; margin-top: 10px;">
       <div class="flex-row">
         <input type="text" id="bind-key-input" placeholder="e.g. landing.hero.title" style="margin-bottom: 0;">
-        <button id="btn-bind" class="btn" style="width: auto; padding-left: 16px; padding-right: 16px;">Bind</button>
+        <button id="btn-bind" class="btn" style="width: auto; padding-left: 12px; padding-right: 12px;">Bind</button>
+        <button id="btn-unbind" class="btn btn-secondary" style="width: auto; padding-left: 12px; padding-right: 12px; display: none;">Unbind</button>
       </div>
     </div>
   </div>
 
   <!-- Key Explorer Card -->
   <div class="card" style="padding-bottom: 8px;">
-    <label>Copy Key Explorer</label>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+      <label style="margin-bottom: 0;">Copy Key Explorer</label>
+      <button id="btn-refresh" class="btn btn-secondary" style="width: auto; padding: 4px 8px; font-size: 11px; border-radius: 6px; display: flex; align-items: center; gap: 4px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Refresh
+      </button>
+    </div>
     <input type="text" id="search-input" placeholder="🔍 Search copy keys..." style="margin-bottom: 0;">
     <div id="keys-list" class="keys-list-container">
       <div class="log-line log-info" style="padding: 12px; text-align: center;">Loading keys...</div>
@@ -337,6 +344,17 @@
         activeStage = opt.dataset.stage;
         log(`Switched view target to "${activeStage.toUpperCase()}"`, 'info');
       });
+    });
+
+    // Auto-fetch list when sheet ID input changes
+    document.getElementById('sheet-id').addEventListener('input', () => {
+      fetchKeysList();
+    });
+
+    // Manual Refresh button
+    document.getElementById('btn-refresh').addEventListener('click', () => {
+      log("Refreshing copy keys list...", "info");
+      fetchKeysList();
     });
 
     // Search Filtering
@@ -414,7 +432,7 @@
           renderKeysExplorer();
         }
       } catch (err) {
-        // Silent error on init, will alert during explicit sync
+        // Silent error on init
       }
     }
 
@@ -427,6 +445,7 @@
         const selectionState = document.getElementById('selection-state');
         const bindingForm = document.getElementById('binding-form');
         const bindKeyInput = document.getElementById('bind-key-input');
+        const unbindBtn = document.getElementById('btn-unbind');
 
         boundKeysList = msg.boundKeys || [];
         renderKeysExplorer();
@@ -440,10 +459,17 @@
           `;
           bindingForm.style.display = 'block';
           bindKeyInput.value = msg.key || '';
+          
+          if (msg.key) {
+            unbindBtn.style.display = 'block';
+          } else {
+            unbindBtn.style.display = 'none';
+          }
         } else {
           selectedNodeId = null;
           selectionState.innerHTML = `<div class="log-info">Select a single text layer in Figma to bind a copy key.</div>`;
           bindingForm.style.display = 'none';
+          unbindBtn.style.display = 'none';
         }
       }
 
@@ -453,7 +479,6 @@
 
       if (msg.type === 'sync-complete') {
         log(`Sync finished. Updated ${msg.updatedCount} layers. Warnings: ${msg.overflowCount}`, 'success');
-        // Refresh bound keys after sync
         fetchKeysList();
       }
     };
@@ -463,6 +488,11 @@
       const key = document.getElementById('bind-key-input').value.trim();
       if (!key) return;
       parent.postMessage({ pluginMessage: { type: 'bind-key', key } }, '*');
+    });
+
+    // Unbind action
+    document.getElementById('btn-unbind').addEventListener('click', () => {
+      parent.postMessage({ pluginMessage: { type: 'unbind-key' } }, '*');
     });
 
     // Fetch and Sync action

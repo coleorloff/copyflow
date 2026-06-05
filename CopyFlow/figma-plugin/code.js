@@ -19,9 +19,11 @@ function sendSelectionToUI() {
     });
   }
 
-  // Scan current page for all bound keys to update UI indicators
+  // Scan current page for all bound keys to update UI indicators (includes both plugin metadata and matching layer names)
   const textNodes = figma.currentPage.findAll(node => node.type === "TEXT");
-  const boundKeys = textNodes.map(node => node.getPluginData("copy-key")).filter(key => !!key);
+  const boundKeys = textNodes.map(node => {
+    return node.getPluginData("copy-key") || node.name;
+  }).filter(key => !!key);
 
   if (selection.length === 1 && selection[0].type === "TEXT") {
     const node = selection[0];
@@ -67,6 +69,25 @@ figma.ui.onmessage = async (msg) => {
     }
   }
 
+  if (msg.type === "unbind-key") {
+    const selection = figma.currentPage.selection;
+    if (selection.length === 1 && selection[0].type === "TEXT") {
+      const node = selection[0];
+      const oldKey = node.getPluginData("copy-key");
+      node.setPluginData("copy-key", "");
+      
+      // Rename back to original characters if it was labeled with the key
+      if (node.name === `CopyKey: ${oldKey}` || node.name === oldKey) {
+        node.name = node.characters;
+      }
+      
+      figma.notify("Layer unbound.");
+      sendSelectionToUI();
+    } else {
+      figma.notify("Please select a single text layer first.");
+    }
+  }
+
   if (msg.type === "sync-layers") {
     const { copyData, stage } = msg; // stage can be 'draft' or 'approved'
     const textNodes = figma.currentPage.findAll(node => node.type === "TEXT");
@@ -75,7 +96,8 @@ figma.ui.onmessage = async (msg) => {
     let overflowCount = 0;
 
     for (const node of textNodes) {
-      const key = node.getPluginData("copy-key");
+      // Look up key by plugin metadata first, then layer name
+      const key = node.getPluginData("copy-key") || node.name;
       if (key && copyData[key]) {
         const newText = copyData[key][stage] || copyData[key].draft || "";
         
@@ -83,13 +105,9 @@ figma.ui.onmessage = async (msg) => {
           // Load font before editing characters
           await figma.loadFontAsync(node.fontName);
           
-          const oldHeight = node.height;
           node.characters = newText;
           updatedCount++;
 
-          // Layout bounds/overflow detection:
-          // Check if the new text overflows the bounding box (if it's auto-height/fixed size)
-          // We can check if it exceeded text container parameters or has layout issues.
           const limit = copyData[key].characterLimit ? parseInt(copyData[key].characterLimit, 10) : 0;
           if (limit > 0 && newText.length > limit) {
             figma.ui.postMessage({
