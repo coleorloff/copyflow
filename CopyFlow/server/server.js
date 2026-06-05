@@ -1,4 +1,5 @@
 const http = require('http');
+const https = require('https');
 const url = require('url');
 
 const PORT = process.env.PORT || 3000;
@@ -79,9 +80,9 @@ const server = http.createServer((req, res) => {
   const sheetId = parsedUrl.query.sheetId || "18T7m-9xT_d2hKkU5Fk6q5p_rYQp77_O5zS5a417u7B0";
 
   if (path === '/api/copy') {
-    const googleUrl = `http://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&_t=${Date.now()}`;
+    const googleUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&_t=${Date.now()}`;
     
-    http.get(googleUrl, (googleRes) => {
+    https.get(googleUrl, (googleRes) => {
       let data = '';
       if (googleRes.statusCode !== 200) {
         console.warn(`Failed to fetch Google Sheet. Status: ${googleRes.statusCode}. Serving mock data.`);
@@ -109,9 +110,9 @@ const server = http.createServer((req, res) => {
     });
 
   } else if (path === '/api/copy/approved') {
-    const googleUrl = `http://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&_t=${Date.now()}`;
+    const googleUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&_t=${Date.now()}`;
 
-    http.get(googleUrl, (googleRes) => {
+    https.get(googleUrl, (googleRes) => {
       let data = '';
       if (googleRes.statusCode !== 200) {
         const approvedOnly = {};
