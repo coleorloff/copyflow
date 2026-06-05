@@ -275,13 +275,7 @@
 
   <!-- Key Explorer Card -->
   <div class="card" style="padding-bottom: 8px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-      <label style="margin-bottom: 0;">Copy Key Explorer</label>
-      <button id="btn-refresh" class="btn btn-secondary" style="width: auto; padding: 4px 8px; font-size: 11px; border-radius: 6px; display: flex; align-items: center; gap: 4px;">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-        Refresh
-      </button>
-    </div>
+    <label>Copy Key Explorer</label>
     <input type="text" id="search-input" placeholder="🔍 Search copy keys..." style="margin-bottom: 0;">
     <div id="keys-list" class="keys-list-container">
       <div class="log-line log-info" style="padding: 12px; text-align: center;">Loading keys...</div>
@@ -294,7 +288,13 @@
     <input type="text" id="server-url" value="http://localhost:3000" placeholder="e.g. http://localhost:3000">
 
     <label>Google Sheet ID</label>
-    <input type="text" id="sheet-id" value="" placeholder="Leave blank to use server defaults/mock">
+    <div class="flex-row">
+      <input type="text" id="sheet-id" value="" placeholder="Leave blank to use server defaults/mock" style="margin-bottom: 0;">
+      <button id="btn-refresh" class="btn btn-secondary" style="width: auto; padding-left: 12px; padding-right: 12px; height: 38px; display: flex; align-items: center; gap: 4px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Refresh
+      </button>
+    </div>
     
     <label>Target Staging Environment</label>
     <div class="stage-selector">
@@ -353,8 +353,7 @@
 
     // Manual Refresh button
     document.getElementById('btn-refresh').addEventListener('click', () => {
-      log("Refreshing copy keys list...", "info");
-      fetchKeysList();
+      fetchKeysList(true);
     });
 
     // Search Filtering
@@ -415,7 +414,7 @@
     }
 
     // Helper to fetch keys list from sync server
-    async function fetchKeysList() {
+    async function fetchKeysList(isManual = false) {
       const serverUrl = document.getElementById('server-url').value.trim();
       const sheetId = document.getElementById('sheet-id').value.trim();
       
@@ -430,9 +429,16 @@
           const data = await res.json();
           availableKeys = Object.keys(data);
           renderKeysExplorer();
+          if (isManual) {
+            log(`Successfully refreshed copy keys. Found ${availableKeys.length} keys.`, 'success');
+          }
+        } else {
+          throw new Error(`HTTP ${res.status}`);
         }
       } catch (err) {
-        // Silent error on init
+        if (isManual) {
+          log(`Failed to refresh keys: ${err.message}. Make sure sync server is running.`, 'warning');
+        }
       }
     }
 
