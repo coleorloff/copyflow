@@ -23,43 +23,87 @@ let localMockDatabase = {
   }
 };
 
-// Simple CSV parser
+// Robust RFC 4180 CSV parser supporting empty cells, quoted commas, and dynamic headers
 function parseCsv(csvText) {
-  const lines = csvText.split('\n');
   const result = {};
-  
-  // Skip header line
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    
-    // Split by comma, handling potential quotes (simple CSV parser)
-    const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-    if (!matches || matches.length < 3) continue;
-    
-    const key = cleanValue(matches[0]);
-    const draft = cleanValue(matches[1]);
-    const approved = cleanValue(matches[2]);
-    const characterLimit = matches[3] ? cleanValue(matches[3]) : "";
-    
-    if (key) {
-      result[key] = {
-        draft,
-        approved,
-        characterLimit
-      };
+  const rows = [];
+  let currentField = '';
+  let inQuotes = false;
+  let currentRow = [];
+
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+    const nextChar = csvText[i + 1];
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (nextChar === '"') {
+          currentField += '"';
+          i++; // skip next quote
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        currentField += char;
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true;
+      } else if (char === ',') {
+        currentRow.push(currentField.trim());
+        currentField = '';
+      } else if (char === '\r' || char === '\n') {
+        currentRow.push(currentField.trim());
+        currentField = '';
+        if (currentRow.length > 0 && currentRow.some(f => f !== '')) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        if (char === '\r' && nextChar === '\n') {
+          i++;
+        }
+      } else {
+        currentField += char;
+      }
     }
   }
-  return result;
-}
-
-function cleanValue(val) {
-  if (!val) return "";
-  let s = val.trim();
-  if (s.startsWith('"') && s.endsWith('"')) {
-    s = s.substring(1, s.length - 1);
+  
+  if (currentField || currentRow.length > 0) {
+    currentRow.push(currentField.trim());
+    rows.push(currentRow);
   }
-  return s.replace(/""/g, '"'); // Unescape quotes
+
+  if (rows.length <= 1) return result;
+  
+  // Dynamically map columns based on header titles
+  const headers = rows[0].map(h => h.toLowerCase().trim());
+  const keyIdx = headers.indexOf('key');
+  const draftIdx = headers.indexOf('draft');
+  const approvedIdx = headers.indexOf('approved');
+  const limitIdx = headers.indexOf('character limit');
+
+  if (keyIdx === -1) {
+    console.warn("CSV is missing a 'Key' column header.");
+    return result;
+  }
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const key = row[keyIdx];
+    if (!key) continue;
+
+    const draft = draftIdx !== -1 && row[draftIdx] ? row[draftIdx] : "";
+    const approved = approvedIdx !== -1 && row[approvedIdx] ? row[approvedIdx] : "";
+    const limit = limitIdx !== -1 && row[limitIdx] ? row[limitIdx] : "";
+
+    result[key] = {
+      draft,
+      approved,
+      characterLimit: limit
+    };
+  }
+
+  return result;
 }
 
 const server = http.createServer((req, res) => {
