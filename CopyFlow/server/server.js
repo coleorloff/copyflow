@@ -4,7 +4,22 @@ const url = require('url');
 const fs = require('fs');
 const path = require('path');
 
+// Simple manual dotenv loader to load environment variables from local .env file
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+  const envText = fs.readFileSync(envPath, 'utf8');
+  envText.split('\n').forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) return;
+    const [key, ...valueParts] = trimmed.split('=');
+    if (key && valueParts.length > 0) {
+      process.env[key.trim()] = valueParts.join('=').trim();
+    }
+  });
+}
+
 const PORT = process.env.PORT || 3000;
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || "";
 
 // Local fallback mock database
 let localMockDatabase = {
@@ -108,6 +123,40 @@ function parseCsv(csvText) {
   return result;
 }
 
+// Parse Google Sheets API v4 ValueRange JSON array
+function parseValueRange(values) {
+  const result = {};
+  if (!values || values.length <= 1) return result;
+  
+  const headers = values[0].map(h => h.toLowerCase().trim());
+  const keyIdx = headers.indexOf('key');
+  const draftIdx = headers.indexOf('draft');
+  const approvedIdx = headers.indexOf('approved');
+  const limitIdx = headers.indexOf('character limit');
+
+  if (keyIdx === -1) {
+    console.warn("Google Sheet is missing a column header named 'Key'.");
+    return result;
+  }
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const key = row[keyIdx];
+    if (!key) continue;
+
+    const draft = draftIdx !== -1 && row[draftIdx] ? row[draftIdx] : "";
+    const approved = approvedIdx !== -1 && row[approvedIdx] ? row[approvedIdx] : "";
+    const limit = limitIdx !== -1 && row[limitIdx] ? row[limitIdx] : "";
+
+    result[key] = {
+      draft,
+      approved,
+      characterLimit: limit
+    };
+  }
+  return result;
+}
+
 function serveLocalFallback(res, fallbackDb) {
   const localCsvPath = path.join(__dirname, 'copy.csv');
   if (fs.existsSync(localCsvPath)) {
@@ -172,9 +221,13 @@ const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathName = parsedUrl.pathname;
   const sheetId = parsedUrl.query.sheetId || "18T7m-9xT_d2hKkU5Fk6q5p_rYQp77_O5zS5a417u7B0";
+  const apiKey = parsedUrl.query.key || GOOGLE_API_KEY;
 
   if (pathName === '/api/copy') {
-    const googleUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&_t=${Date.now()}`;
+    let googleUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&_t=${Date.now()}`;
+    if (apiKey) {
+      googleUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A:E?key=${apiKey}&_t=${Date.now()}`;
+    }
     
     https.get(googleUrl, (googleRes) => {
       let data = '';
@@ -187,7 +240,13 @@ const server = http.createServer((req, res) => {
       googleRes.on('data', (chunk) => { data += chunk; });
       googleRes.on('end', () => {
         try {
-          const parsed = parseCsv(data);
+          let parsed;
+          if (apiKey) {
+            const json = JSON.parse(data);
+            parsed = parseValueRange(json.values);
+          } else {
+            parsed = parseCsv(data);
+          }
           if (Object.keys(parsed).length === 0) throw new Error("Parsed empty object");
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(parsed));
@@ -201,7 +260,10 @@ const server = http.createServer((req, res) => {
     });
 
   } else if (pathName === '/api/copy/approved') {
-    const googleUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&_t=${Date.now()}`;
+    let googleUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&_t=${Date.now()}`;
+    if (apiKey) {
+      googleUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A:E?key=${apiKey}&_t=${Date.now()}`;
+    }
 
     https.get(googleUrl, (googleRes) => {
       let data = '';
@@ -214,7 +276,13 @@ const server = http.createServer((req, res) => {
       googleRes.on('data', (chunk) => { data += chunk; });
       googleRes.on('end', () => {
         try {
-          const parsed = parseCsv(data);
+          let parsed;
+          if (apiKey) {
+            const json = JSON.parse(data);
+            parsed = parseValueRange(json.values);
+          } else {
+            parsed = parseCsv(data);
+          }
           const approvedOnly = {};
           for (const [key, val] of Object.entries(parsed)) {
             approvedOnly[key] = val.approved || val.draft;
