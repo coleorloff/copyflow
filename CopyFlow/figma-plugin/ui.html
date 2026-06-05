@@ -418,9 +418,9 @@
       const serverUrl = document.getElementById('server-url').value.trim();
       const sheetId = document.getElementById('sheet-id').value.trim();
       
-      let fetchUrl = `${serverUrl}/api/copy`;
+      let fetchUrl = `${serverUrl}/api/copy?_t=${Date.now()}`;
       if (sheetId) {
-        fetchUrl += `?sheetId=${encodeURIComponent(sheetId)}`;
+        fetchUrl += `&sheetId=${encodeURIComponent(sheetId)}`;
       }
 
       try {
@@ -513,9 +513,9 @@
         // Ignore storage blockers
       }
 
-      let fetchUrl = `${serverUrl}/api/copy`;
+      let fetchUrl = `${serverUrl}/api/copy?_t=${Date.now()}`;
       if (sheetId) {
-        fetchUrl += `?sheetId=${encodeURIComponent(sheetId)}`;
+        fetchUrl += `&sheetId=${encodeURIComponent(sheetId)}`;
       }
 
       log(`Fetching copy from ${fetchUrl}...`, 'info');
