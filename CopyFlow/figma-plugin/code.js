@@ -57,12 +57,10 @@ figma.ui.onmessage = async (msg) => {
       const node = selection[0];
       node.setPluginData("copy-key", msg.key);
       
-      // Update node name for better organization if unnamed
-      if (node.name === node.characters || node.name.startsWith("CopyKey: ")) {
-        node.name = `CopyKey: ${msg.key}`;
-      }
+      // Lock layer name to the key so it behaves as an explicit identifier
+      node.name = msg.key;
       
-      figma.notify(`Bound to key: ${msg.key}`);
+      figma.notify(`Bound and renamed to: ${msg.key}`);
       sendSelectionToUI();
     } else {
       figma.notify("Please select a single text layer first.");
@@ -73,13 +71,11 @@ figma.ui.onmessage = async (msg) => {
     const selection = figma.currentPage.selection;
     if (selection.length === 1 && selection[0].type === "TEXT") {
       const node = selection[0];
-      const oldKey = node.getPluginData("copy-key");
+      const oldKey = node.getPluginData("copy-key") || node.name;
       node.setPluginData("copy-key", "");
       
-      // Rename back to original characters if it was labeled with the key
-      if (node.name === `CopyKey: ${oldKey}` || node.name === oldKey) {
-        node.name = node.characters;
-      }
+      // Revert name to characters
+      node.name = node.characters;
       
       figma.notify("Layer unbound.");
       sendSelectionToUI();
@@ -106,6 +102,8 @@ figma.ui.onmessage = async (msg) => {
           await figma.loadFontAsync(node.fontName);
           
           node.characters = newText;
+          // Explicitly assign/re-assign name to lock it in Figma
+          node.name = key;
           updatedCount++;
 
           const limit = copyData[key].characterLimit ? parseInt(copyData[key].characterLimit, 10) : 0;
