@@ -525,10 +525,10 @@
       const keyIdx = headers.indexOf('key');
       const limitIdx = headers.indexOf('character limit');
 
-      // Identify dynamic version headers (columns that aren't key, character limit, or context)
+      // Identify dynamic version headers (columns starting with "copy v" like "Copy V1", "Copy V2")
       const versionHeaders = [];
       headers.forEach((h, idx) => {
-        if (idx !== keyIdx && idx !== limitIdx && h !== 'context' && h !== '') {
+        if (/^copy\s+v/i.test(h)) {
           versionHeaders.push({ name: rows[0][idx], index: idx });
         }
       });
