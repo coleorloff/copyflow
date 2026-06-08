@@ -1,8 +1,8 @@
-Key,Draft,Approved,Character Limit,Context
-card.header.01,Kitchen Updates 🍔,The Burger Bureau 🍟,40,
-card.subhead.01,resh off the grill right now,Freshly grilled 2m ago,100,
-card.title.01,We got a new secret sauce recipe,The Secret Sauce Just Dropped,,
-card.subtitle.01,The menu just got a whole lot tastier,Stack your digital patties with zero lag,,
-card.body.01,"Yo, we finally fixed the ordering app so it doesn't freeze when you try to stack extra bacon. Plus the tracking map now actually shows the delivery driver instead of spinning forever. Go grab a combo and try it out before it gets cold.","Ordering is 4x faster! Customize your dream burger, layer on the extra cheese, and track your delivery in real time without the sizzle fading.",,
-card.cta.primary.01,Order now,Order Delivery 🥤,,
-card.cta.secondary.02,Check menu,View Menu,,
+Key,Copy V1,Copy V2,Copy V3,Character Limit,Context
+card.header.01,tbd,Kitchen Updates 🍔,The Burger Bureau 🍟,40,
+card.subhead.01,tbd,resh off the grill right now,Freshly grilled 2m ago,100,
+card.title.01,placeholder,We got a new secret sauce recipe,The Secret Sauce Just Dropped,,
+card.subtitle.01,Lorem Ipsum,The menu just got a whole lot tastier,Stack your digital patties with zero lag,,
+card.body.01,Lorem ipsum dolar set something,"Yo, we finally fixed the ordering app so it doesn't freeze when you try to stack extra bacon. Plus the tracking map now actually shows the delivery driver instead of spinning forever. Go grab a combo and try it out before it gets cold.","Ordering is 4x faster! Customize your dream burger, layer on the extra cheese, and track your delivery in real time without the sizzle fading.",,
+card.cta.primary.01,beep,Order now,Order Delivery 🥤,,
+card.cta.secondary.02,honk,Check menu,View Menu,,
