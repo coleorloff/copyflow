@@ -19,9 +19,14 @@ function sendSelectionToUI() {
     });
   }
 
-  // Scan current page for all text node names (used for matching key visualization)
+  // Scan current page for all text node name -> characters mappings
   const textNodes = figma.currentPage.findAll(node => node.type === "TEXT");
-  const boundKeys = textNodes.map(node => node.name).filter(name => !!name);
+  const boundKeysMap = {};
+  textNodes.forEach(node => {
+    if (node.name) {
+      boundKeysMap[node.name] = node.characters;
+    }
+  });
 
   const lastSyncedSha = figma.root.getPluginData("last-synced-sha") || "";
 
@@ -34,14 +39,14 @@ function sendSelectionToUI() {
       nodeName: node.name,
       currentText: node.characters,
       key: node.name,
-      boundKeys: boundKeys,
+      boundKeysMap: boundKeysMap,
       lastSyncedSha: lastSyncedSha
     });
   } else {
     figma.ui.postMessage({
       type: "selection-changed",
       selected: false,
-      boundKeys: boundKeys,
+      boundKeysMap: boundKeysMap,
       lastSyncedSha: lastSyncedSha
     });
   }
@@ -83,7 +88,7 @@ figma.ui.onmessage = async (msg) => {
   }
 
   if (msg.type === "sync-layers") {
-    const { copyData, stage, sha, syncAll, selectedKeys } = msg; // selectedKeys is an array of checked key names
+    const { copyData, stage, sha, syncAll, selectedKeys } = msg; // stage holds version name (e.g. 'Copy V1'), syncAll is boolean
     
     let nodesToSync = [];
     if (syncAll) {

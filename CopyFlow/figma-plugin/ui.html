@@ -212,6 +212,7 @@
       padding: 2px 6px;
       border-radius: 4px;
       font-weight: 500;
+      white-space: nowrap;
     }
 
     .key-status.bound {
@@ -299,7 +300,7 @@
     <button id="btn-sync-now" class="btn" style="background: white; color: #b45309; font-weight: 600; padding: 6px 12px; font-size: 11px; width: auto; display: inline-flex;">Sync Now</button>
   </div>
 
-  <!-- Key Explorer Card (with selection and unbind built-in) -->
+  <!-- Key Explorer Card -->
   <div class="card" style="padding-bottom: 8px; margin-bottom: 12px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <label style="margin-bottom: 0;">Copy Key Explorer</label>
@@ -313,6 +314,13 @@
         <button id="btn-deselect-all" class="btn-secondary" style="border: none; padding: 2px 6px; font-size: 11px; border-radius: 4px; display: none; color: var(--primary);">Deselect All</button>
       </div>
 
+      <!-- Selected Layer Status Line -->
+      <div id="selection-status-bar" style="background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; display: none; font-size: 11px; align-items: center; gap: 6px;">
+        <span style="color: var(--text-secondary);">Selected Canvas Text:</span>
+        <strong id="selected-layer-name" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;">None</strong>
+        <span id="selected-layer-match-badge" class="key-status unbound" style="padding: 1px 5px; font-size: 9px;">Unmatched</span>
+      </div>
+
       <input type="text" id="search-input" placeholder="🔍 Search copy keys..." style="margin-bottom: 0;">
       <div id="keys-list" class="keys-list-container">
         <div class="log-line log-info" style="padding: 12px; text-align: center;">Loading keys...</div>
@@ -320,7 +328,7 @@
     </div>
   </div>
 
-  <!-- Realtime Console Log Card (Aligned) -->
+  <!-- Realtime Console Log Card -->
   <div class="card" style="padding-bottom: 14px; margin-bottom: 12px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <label style="margin-bottom: 0;">Activity Log</label>
@@ -332,10 +340,13 @@
   </div>
 
   <script>
-    let selectedKeys = new Set(); // Stores checked copy key strings for Sync Selected Only
+    let selectedKeys = new Set(); // Checked copy keys inside the plugin list
     let availableKeys = []; // Array of string keys parsed from GitHub CSV
-    let boundKeysList = []; // Array of string keys bound in Figma (all text layer names)
+    let boundKeysMap = {};  // Map of text layer name -> characters from Figma
     
+    let selectedNodeName = ""; // Name of selected Figma text box
+    let selectedNodeId = null;  // ID of selected Figma text box
+
     let documentSha = "";     // Last synced SHA stored in Figma document metadata
     let latestCommitSha = "";  // Newest SHA fetched from GitHub
     let cachedCopyData = {};   // Cached parsed CSV data
@@ -422,7 +433,7 @@
       consoleEl.scrollTop = consoleEl.scrollHeight;
     }
 
-    // Render Key Explorer List with check toggles
+    // Render Key Explorer List showing matching version names or Unmatched alerts
     function renderKeysExplorer() {
       const container = document.getElementById('keys-list');
       const query = document.getElementById('search-input').value.toLowerCase().trim();
@@ -444,30 +455,72 @@
         const item = document.createElement('div');
         item.className = 'key-item';
         
-        const isBound = boundKeysList.includes(key);
         const isChecked = selectedKeys.has(key);
+        const currentText = boundKeysMap[key]; // string value if matched, undefined if not present in Figma
         
+        let statusHtml = '';
+        if (currentText !== undefined) {
+          // Present in Figma - find matching version column name
+          let matchingVersion = '';
+          const versions = (cachedCopyData[key] && cachedCopyData[key].versions) ? cachedCopyData[key].versions : {};
+          for (const vName in versions) {
+            if (versions[vName] === currentText) {
+              matchingVersion = vName;
+              break;
+            }
+          }
+          if (!matchingVersion) {
+            matchingVersion = "Custom/Out of Sync";
+          }
+          statusHtml = `<span class="key-status bound" style="font-size:10px;">${escapeHtml(matchingVersion)}</span>`;
+        } else {
+          // Not matched in Figma
+          statusHtml = `<span class="key-status unbound" style="font-size:10px;">⚠️ Unmatched</span>`;
+        }
+
+        // Show a little link/match button next to the status badge ONLY if a canvas text layer is selected and is unmatched to this key
+        let matchBtnHtml = '';
+        if (selectedNodeId && selectedNodeName !== key) {
+          matchBtnHtml = `
+            <button class="btn-secondary link-key-btn" data-key="${escapeHtml(key)}" style="width: auto; padding: 2px 6px; font-size: 10px; height: 20px; line-height: 1; border-color: var(--primary); color: var(--primary); margin-right: 8px;">
+              Link
+            </button>
+          `;
+        }
+
         item.innerHTML = `
           <div style="display: flex; align-items: center; gap: 8px; flex-grow: 1; overflow: hidden;">
             <input type="checkbox" class="key-checkbox" data-key="${escapeHtml(key)}" ${isChecked ? 'checked' : ''} style="width: auto; margin-bottom: 0; cursor: pointer;">
             <div class="key-name" title="${escapeHtml(key)}">${escapeHtml(key)}</div>
           </div>
-          <span class="key-status bound" style="display:${isBound ? 'inline-block' : 'none'};">Matched</span>
+          <div style="display: flex; align-items: center;">
+            ${matchBtnHtml}
+            ${statusHtml}
+          </div>
         `;
         
-        // Let clicking the list row (except the checkbox itself) toggle check state
+        // Clicking list row (except checkbox and link button) toggles checkbox selection
         item.addEventListener('click', (e) => {
-          if (e.target.type === 'checkbox') return;
+          if (e.target.type === 'checkbox' || e.target.classList.contains('link-key-btn')) return;
           const cb = item.querySelector('.key-checkbox');
           cb.checked = !cb.checked;
           toggleKeyChecked(key, cb.checked);
         });
 
-        // Handle checkbox click
+        // Checkbox click listener
         const checkbox = item.querySelector('.key-checkbox');
         checkbox.addEventListener('change', (e) => {
           toggleKeyChecked(key, e.target.checked);
         });
+
+        // Link button click listener
+        if (selectedNodeId && selectedNodeName !== key) {
+          const linkBtn = item.querySelector('.link-key-btn');
+          linkBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            parent.postMessage({ pluginMessage: { type: 'bind-key', key: key } }, '*');
+          });
+        }
         
         container.appendChild(item);
       });
@@ -483,7 +536,7 @@
       updateSelectionControls();
     }
 
-    // Update the visibility and enabled states of selection controls
+    // Update selection count text and sync selected button status
     function updateSelectionControls() {
       const countLabel = document.getElementById('checked-count');
       const deselectBtn = document.getElementById('btn-deselect-all');
@@ -750,7 +803,11 @@
       if (!msg) return;
 
       if (msg.type === 'selection-changed') {
-        boundKeysList = msg.boundKeys || [];
+        const selectedLayerName = document.getElementById('selected-layer-name');
+        const selectedLayerMatchBadge = document.getElementById('selected-layer-match-badge');
+        const selectionStatusBar = document.getElementById('selection-status-bar');
+
+        boundKeysMap = msg.boundKeysMap || {};
         documentSha = msg.lastSyncedSha || "";
         
         renderKeysExplorer();
@@ -762,6 +819,34 @@
         } else {
           banner.style.display = 'none';
         }
+
+        if (msg.selected) {
+          selectedNodeId = msg.nodeId;
+          selectedNodeName = msg.nodeName;
+          selectedLayerName.textContent = msg.nodeName;
+          selectionStatusBar.style.display = "flex";
+          
+          // Check if selected layer's name matches a key from the spreadsheet
+          const hasMatch = availableKeys.includes(msg.nodeName);
+          if (hasMatch) {
+            selectedLayerMatchBadge.textContent = "Matched";
+            selectedLayerMatchBadge.className = "key-status bound";
+            selectedLayerMatchBadge.style.display = "inline-flex";
+          } else {
+            selectedLayerMatchBadge.textContent = "Unmatched";
+            selectedLayerMatchBadge.className = "key-status unbound";
+            selectedLayerMatchBadge.style.display = "inline-flex";
+          }
+        } else {
+          selectedNodeId = null;
+          selectedNodeName = "";
+          selectedLayerName.textContent = "None";
+          selectedLayerMatchBadge.style.display = "none";
+          selectionStatusBar.style.display = "none";
+        }
+        
+        // Refresh explorer view to show link/match button if selection status has changed
+        renderKeysExplorer();
       }
 
       if (msg.type === 'log') {
