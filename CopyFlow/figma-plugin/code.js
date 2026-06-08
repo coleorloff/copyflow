@@ -1,5 +1,5 @@
 // Show UI with comfortable dimensions
-figma.showUI(__html__, { width: 400, height: 640, themeColors: true });
+figma.showUI(__html__, { width: 400, height: 680, themeColors: true });
 
 // Listen for selection changes to update the UI
 figma.on("selectionchange", () => {
@@ -19,24 +19,21 @@ function sendSelectionToUI() {
     });
   }
 
-  // Scan current page for all bound keys to update UI indicators (includes both plugin metadata and matching layer names)
+  // Scan current page for all text node names (used for matching key visualization)
   const textNodes = figma.currentPage.findAll(node => node.type === "TEXT");
-  const boundKeys = textNodes.map(node => {
-    return node.getPluginData("copy-key") || node.name;
-  }).filter(key => !!key);
+  const boundKeys = textNodes.map(node => node.name).filter(name => !!name);
 
   const lastSyncedSha = figma.root.getPluginData("last-synced-sha") || "";
 
   if (selection.length === 1 && selection[0].type === "TEXT") {
     const node = selection[0];
-    const key = node.getPluginData("copy-key") || "";
     figma.ui.postMessage({
       type: "selection-changed",
       selected: true,
       nodeId: node.id,
       nodeName: node.name,
       currentText: node.characters,
-      key: key,
+      key: node.name,
       boundKeys: boundKeys,
       lastSyncedSha: lastSyncedSha
     });
@@ -59,12 +56,11 @@ figma.ui.onmessage = async (msg) => {
     const selection = figma.currentPage.selection;
     if (selection.length === 1 && selection[0].type === "TEXT") {
       const node = selection[0];
-      node.setPluginData("copy-key", msg.key);
       
-      // Lock layer name to the key so it behaves as an explicit identifier
+      // Rename the layer to the copy key (locks the name from auto-renaming)
       node.name = msg.key;
       
-      figma.notify(`Bound and renamed to: ${msg.key}`);
+      figma.notify(`Renamed layer to match key: ${msg.key}`);
       sendSelectionToUI();
     } else {
       figma.notify("Please select a single text layer first.");
@@ -75,13 +71,11 @@ figma.ui.onmessage = async (msg) => {
     const selection = figma.currentPage.selection;
     if (selection.length === 1 && selection[0].type === "TEXT") {
       const node = selection[0];
-      const oldKey = node.getPluginData("copy-key") || node.name;
-      node.setPluginData("copy-key", "");
       
-      // Revert name to characters
+      // Reset node name back to its raw characters
       node.name = node.characters;
       
-      figma.notify("Layer unbound.");
+      figma.notify("Layer name reverted.");
       sendSelectionToUI();
     } else {
       figma.notify("Please select a single text layer first.");
@@ -96,8 +90,8 @@ figma.ui.onmessage = async (msg) => {
     let overflowCount = 0;
 
     for (const node of textNodes) {
-      // Look up key by plugin metadata first, then layer name
-      const key = node.getPluginData("copy-key") || node.name;
+      // Look up key strictly by layer name
+      const key = node.name;
       if (key && copyData[key]) {
         const newText = copyData[key][stage] || copyData[key].draft || "";
         
@@ -106,7 +100,7 @@ figma.ui.onmessage = async (msg) => {
           await figma.loadFontAsync(node.fontName);
           
           node.characters = newText;
-          // Explicitly assign/re-assign name to lock it in Figma
+          // Explicitly assign/re-assign name to keep it locked
           node.name = key;
           updatedCount++;
 

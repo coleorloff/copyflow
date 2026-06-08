@@ -37,10 +37,17 @@
     h2 {
       font-size: 15px;
       font-weight: 600;
-      margin: 0 0 12px 0;
+      margin: 0;
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
     }
 
     .card {
@@ -105,34 +112,13 @@
       background-color: transparent;
       border: 1px solid var(--border);
       color: var(--text);
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s;
     }
 
     .btn-secondary:hover {
       background-color: var(--border);
-    }
-
-    .selection-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      background-color: var(--border);
-      color: var(--text-secondary);
-      width: fit-content;
-    }
-
-    .status-badge.active {
-      background-color: rgba(99, 102, 241, 0.2);
-      color: var(--primary);
-      border: 1px solid rgba(99, 102, 241, 0.3);
     }
 
     .flex-row {
@@ -152,7 +138,6 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 2px;
-      margin-bottom: 12px;
     }
 
     .stage-option {
@@ -164,6 +149,7 @@
       font-weight: 500;
       color: var(--text-secondary);
       transition: all 0.2s;
+      white-space: nowrap;
     }
 
     .stage-option.active {
@@ -172,7 +158,7 @@
     }
 
     .console {
-      height: 180px;
+      height: 240px;
       background: var(--input-bg);
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -180,6 +166,7 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
       overflow-y: auto;
+      margin-top: 4px;
     }
 
     .log-line {
@@ -242,8 +229,8 @@
     }
 
     .key-status.unbound {
-      background-color: rgba(148, 163, 184, 0.1);
-      color: var(--text-secondary);
+      background-color: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
     }
 
     /* Alert Banner */
@@ -260,46 +247,19 @@
 </head>
 <body>
 
-  <h2>
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
-    CopyFlow GitHub Sync
-  </h2>
-
-  <!-- Alert Banner -->
-  <div id="update-alert-banner" class="alert-banner">
-    <div style="font-weight: 600; margin-bottom: 2px;">🆕 New copy version on GitHub!</div>
-    <div id="alert-commit-msg" style="font-size: 11px; font-style: italic; opacity: 0.95; margin-bottom: 4px;">"Commit Message"</div>
-    <div id="alert-commit-meta" style="font-size: 10px; opacity: 0.8; margin-bottom: 8px;">By Author (10 mins ago)</div>
-    <button id="btn-sync-now" class="btn" style="background: white; color: #b45309; font-weight: 600; padding: 6px 12px; font-size: 11px; width: auto; display: inline-flex;">Sync Now</button>
+  <!-- Top Header with Settings Button -->
+  <div class="header-bar">
+    <h2>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+      CopyFlow
+    </h2>
+    <button id="btn-settings-toggle" class="btn-secondary" style="border: none; padding: 4px; display: flex;" title="Settings">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
   </div>
 
-  <!-- Selection / Binding Card -->
-  <div class="card">
-    <label>Current Selection</label>
-    <div id="selection-state" class="selection-panel">
-      <div class="log-info">Select a single text layer in Figma to bind a copy key.</div>
-    </div>
-    
-    <div id="binding-form" style="display: none; margin-top: 10px;">
-      <div class="flex-row">
-        <input type="text" id="bind-key-input" placeholder="e.g. landing.hero.title" style="margin-bottom: 0; flex: 1;">
-        <button id="btn-bind" class="btn" style="width: auto; padding-left: 12px; padding-right: 12px;">Bind</button>
-        <button id="btn-unbind" class="btn btn-secondary" style="width: auto; padding-left: 12px; padding-right: 12px; display: none;">Unbind</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Key Explorer Card -->
-  <div class="card" style="padding-bottom: 8px;">
-    <label>Copy Key Explorer</label>
-    <input type="text" id="search-input" placeholder="🔍 Search copy keys..." style="margin-bottom: 0;">
-    <div id="keys-list" class="keys-list-container">
-      <div class="log-line log-info" style="padding: 12px; text-align: center;">Loading keys...</div>
-    </div>
-  </div>
-
-  <!-- GitHub Settings Card -->
-  <div class="card">
+  <!-- Collapsible Settings Panel -->
+  <div id="settings-panel" class="card" style="display: none; padding-top: 10px; margin-bottom: 12px;">
     <label>GitHub Repository</label>
     <input type="text" id="gh-repo" value="coleorloff/copyflow" placeholder="e.g. owner/repo">
 
@@ -320,19 +280,49 @@
       </div>
     </div>
 
-    <label style="margin-top: 10px;">GitHub Access Token (Optional)</label>
+    <label style="margin-top: 10px;">GitHub Access Token</label>
     <input type="password" id="gh-token" value="" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-    
-    <label>Target Staging Environment</label>
-    <div class="stage-selector">
-      <div class="stage-option active" data-stage="draft">Draft</div>
-      <div class="stage-option" data-stage="approved">Approved</div>
-    </div>
+  </div>
 
-    <button id="btn-sync" class="btn">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-      Sync to Figma
-    </button>
+  <!-- Staging and Sync actions (At the very top) -->
+  <div class="card" style="padding: 10px; margin-bottom: 12px;">
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <div class="stage-selector" style="flex: 1;">
+        <div class="stage-option active" data-stage="draft">Draft</div>
+        <div class="stage-option" data-stage="approved">Approved</div>
+      </div>
+      <button id="btn-sync" class="btn" style="flex: 1.1; height: 32px; padding: 0; font-size: 12px; gap: 4px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Sync to Figma
+      </button>
+    </div>
+  </div>
+
+  <!-- Update Alert Banner -->
+  <div id="update-alert-banner" class="alert-banner">
+    <div style="font-weight: 600; margin-bottom: 2px;">🆕 New copy version on GitHub!</div>
+    <div id="alert-commit-msg" style="font-size: 11px; font-style: italic; opacity: 0.95; margin-bottom: 4px;">"Commit Message"</div>
+    <div id="alert-commit-meta" style="font-size: 10px; opacity: 0.8; margin-bottom: 8px;">By Author (10 mins ago)</div>
+    <button id="btn-sync-now" class="btn" style="background: white; color: #b45309; font-weight: 600; padding: 6px 12px; font-size: 11px; width: auto; display: inline-flex;">Sync Now</button>
+  </div>
+
+  <!-- Current Selection Info Panel -->
+  <div id="selection-status-bar" class="card" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;">
+    <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex-grow: 1; margin-right: 8px;">
+      <span style="color: var(--text-secondary);">Selected:</span> 
+      <span id="selected-layer-name" style="font-weight:600; overflow: hidden; text-overflow: ellipsis;">None</span>
+      <span id="selected-layer-match-badge" class="key-status unbound" style="display:none; padding: 1px 6px;">Unmatched</span>
+    </div>
+    <button id="btn-unbind" class="btn btn-secondary" style="width: auto; padding: 2px 8px; font-size: 11px; display: none; height: 24px; border-radius: 4px; line-height: 1.2;" title="Reset layer name to raw characters">Reset Name</button>
+  </div>
+
+  <!-- Key Explorer Card -->
+  <div class="card" style="padding-bottom: 8px; margin-bottom: 8px;">
+    <label>Copy Key Explorer</label>
+    <input type="text" id="search-input" placeholder="🔍 Search copy keys..." style="margin-bottom: 0;">
+    <div id="keys-list" class="keys-list-container">
+      <div class="log-line log-info" style="padding: 12px; text-align: center;">Loading keys...</div>
+    </div>
   </div>
 
   <!-- Realtime Console Log -->
@@ -345,7 +335,7 @@
     let activeStage = 'draft';
     let selectedNodeId = null;
     let availableKeys = []; // Array of string keys parsed from GitHub CSV
-    let boundKeysList = []; // Array of string keys bound in Figma
+    let boundKeysList = []; // Array of string keys bound in Figma (all text layer names)
     
     let documentSha = "";     // Last synced SHA stored in Figma document metadata
     let latestCommitSha = "";  // Newest SHA fetched from GitHub
@@ -367,6 +357,13 @@
     } catch (e) {
       console.warn("localStorage is blocked in this sandbox:", e.message);
     }
+
+    // Toggle settings panel
+    document.getElementById('btn-settings-toggle').addEventListener('click', () => {
+      const panel = document.getElementById('settings-panel');
+      const isVisible = panel.style.display === 'block';
+      panel.style.display = isVisible ? 'none' : 'block';
+    });
 
     // Tab Switcher
     const options = document.querySelectorAll('.stage-option');
@@ -397,6 +394,11 @@
     // Sync Now banner action
     document.getElementById('btn-sync-now').addEventListener('click', () => {
       performSync();
+    });
+
+    // Reset Name button action
+    document.getElementById('btn-unbind').addEventListener('click', () => {
+      parent.postMessage({ pluginMessage: { type: 'unbind-key' } }, '*');
     });
 
     // Logging helper
@@ -435,15 +437,15 @@
         
         item.innerHTML = `
           <div class="key-name" title="${escapeHtml(key)}">${escapeHtml(key)}</div>
-          <span class="key-status ${isBound ? 'bound' : 'unbound'}">${isBound ? 'Bound' : 'Unbound'}</span>
+          <span class="key-status ${isBound ? 'bound' : 'unbound'}" style="display:${isBound ? 'inline-block' : 'none'};">${isBound ? 'Bound' : ''}</span>
         `;
         
-        // Click to bind key to selected element
+        // Click to rename selected element to this key
         item.addEventListener('click', () => {
           if (selectedNodeId) {
             parent.postMessage({ pluginMessage: { type: 'bind-key', key } }, '*');
           } else {
-            log(`Cannot bind "${key}". Please select a single text layer in Figma first.`, 'warning');
+            log(`Cannot rename: Please select a single text layer in Figma first.`, 'warning');
           }
         });
         
@@ -656,9 +658,8 @@
       if (!msg) return;
 
       if (msg.type === 'selection-changed') {
-        const selectionState = document.getElementById('selection-state');
-        const bindingForm = document.getElementById('binding-form');
-        const bindKeyInput = document.getElementById('bind-key-input');
+        const selectedLayerName = document.getElementById('selected-layer-name');
+        const selectedLayerMatchBadge = document.getElementById('selected-layer-match-badge');
         const unbindBtn = document.getElementById('btn-unbind');
 
         boundKeysList = msg.boundKeys || [];
@@ -676,24 +677,25 @@
 
         if (msg.selected) {
           selectedNodeId = msg.nodeId;
-          selectionState.innerHTML = `
-            <div style="font-weight: 600; margin-bottom: 2px;">${escapeHtml(msg.nodeName)}</div>
-            <div style="font-size: 11px; color: var(--text-secondary);">Current text: "${escapeHtml(msg.currentText.substring(0, 40))}${msg.currentText.length > 40 ? '...' : ''}"</div>
-            ${msg.key ? `<div class="status-badge active" style="margin-top: 6px;">Key: ${escapeHtml(msg.key)}</div>` : '<div class="status-badge" style="margin-top: 6px;">Unbound</div>'}
-          `;
-          bindingForm.style.display = 'block';
-          bindKeyInput.value = msg.key || '';
+          selectedLayerName.textContent = msg.nodeName;
+          unbindBtn.style.display = "inline-block";
           
-          if (msg.key) {
-            unbindBtn.style.display = 'block';
+          // Check if selected layer's name matches a key from the spreadsheet
+          const hasMatch = availableKeys.includes(msg.nodeName);
+          if (hasMatch) {
+            selectedLayerMatchBadge.textContent = "Matched";
+            selectedLayerMatchBadge.className = "key-status bound";
+            selectedLayerMatchBadge.style.display = "inline-flex";
           } else {
-            unbindBtn.style.display = 'none';
+            selectedLayerMatchBadge.textContent = "Unmatched";
+            selectedLayerMatchBadge.className = "key-status unbound";
+            selectedLayerMatchBadge.style.display = "inline-flex";
           }
         } else {
           selectedNodeId = null;
-          selectionState.innerHTML = `<div class="log-info">Select a single text layer in Figma to bind a copy key.</div>`;
-          bindingForm.style.display = 'none';
-          unbindBtn.style.display = 'none';
+          selectedLayerName.textContent = "None";
+          selectedLayerMatchBadge.style.display = "none";
+          unbindBtn.style.display = "none";
         }
       }
 
@@ -706,18 +708,6 @@
         fetchLatestCommit();
       }
     };
-
-    // Bind action (Manual Input fallback)
-    document.getElementById('btn-bind').addEventListener('click', () => {
-      const key = document.getElementById('bind-key-input').value.trim();
-      if (!key) return;
-      parent.postMessage({ pluginMessage: { type: 'bind-key', key } }, '*');
-    });
-
-    // Unbind action
-    document.getElementById('btn-unbind').addEventListener('click', () => {
-      parent.postMessage({ pluginMessage: { type: 'unbind-key' } }, '*');
-    });
 
     // Helper to escape html characters safely
     function escapeHtml(str) {
