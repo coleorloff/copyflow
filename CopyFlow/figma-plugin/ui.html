@@ -121,6 +121,16 @@
       background-color: var(--border);
     }
 
+    .btn-secondary.active {
+      background-color: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    #settings-panel {
+      border-top: 3px solid var(--primary);
+    }
+
     .flex-row {
       display: flex;
       gap: 8px;
@@ -342,19 +352,21 @@
       console.warn("localStorage is blocked in this sandbox:", e.message);
     }
 
-    // Toggle settings panel
+    // Toggle settings panel with active status coloring
     document.getElementById('btn-settings-toggle').addEventListener('click', () => {
       const panel = document.getElementById('settings-panel');
+      const btn = document.getElementById('btn-settings-toggle');
       const isVisible = panel.style.display === 'block';
       panel.style.display = isVisible ? 'none' : 'block';
+      btn.classList.toggle('active', !isVisible);
     });
 
     // Toggle explorer panel
     document.getElementById('btn-keys-toggle').addEventListener('click', () => {
       const body = document.getElementById('explorer-body');
       const btn = document.getElementById('btn-keys-toggle');
-      const isHidden = body.style.display === 'none';
-      body.style.display = isHidden ? 'none' : 'block';
+      const isHidden = getComputedStyle(body).display === 'none';
+      body.style.display = isHidden ? 'block' : 'none';
       btn.textContent = isHidden ? 'Show' : 'Hide';
     });
 
@@ -362,8 +374,8 @@
     document.getElementById('btn-console-toggle').addEventListener('click', () => {
       const logBox = document.getElementById('console');
       const btn = document.getElementById('btn-console-toggle');
-      const isHidden = logBox.style.display === 'none';
-      logBox.style.display = isHidden ? 'none' : 'block';
+      const isHidden = getComputedStyle(logBox).display === 'none';
+      logBox.style.display = isHidden ? 'block' : 'none';
       btn.textContent = isHidden ? 'Show' : 'Hide';
     });
 
