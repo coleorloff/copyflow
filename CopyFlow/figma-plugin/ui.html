@@ -37,7 +37,7 @@
     h2 {
       font-size: 15px;
       font-weight: 600;
-      margin: 0 0 16px 0;
+      margin: 0 0 12px 0;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -143,7 +143,6 @@
     }
 
     .flex-row > * {
-      flex: 1;
       margin-bottom: 0;
     }
 
@@ -192,7 +191,6 @@
     .log-success { color: var(--success); }
     .log-warning { color: var(--warning); }
 
-    /* Key Explorer Styles */
     .keys-list-container {
       max-height: 140px;
       overflow-y: auto;
@@ -247,14 +245,33 @@
       background-color: rgba(148, 163, 184, 0.1);
       color: var(--text-secondary);
     }
+
+    /* Alert Banner */
+    .alert-banner {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+      color: white;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.15);
+      display: none; /* Hidden by default */
+    }
   </style>
 </head>
 <body>
 
   <h2>
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-    CopyFlow Sync
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+    CopyFlow GitHub Sync
   </h2>
+
+  <!-- Alert Banner -->
+  <div id="update-alert-banner" class="alert-banner">
+    <div style="font-weight: 600; margin-bottom: 2px;">🆕 New copy version on GitHub!</div>
+    <div id="alert-commit-msg" style="font-size: 11px; font-style: italic; opacity: 0.95; margin-bottom: 4px;">"Commit Message"</div>
+    <div id="alert-commit-meta" style="font-size: 10px; opacity: 0.8; margin-bottom: 8px;">By Author (10 mins ago)</div>
+    <button id="btn-sync-now" class="btn" style="background: white; color: #b45309; font-weight: 600; padding: 6px 12px; font-size: 11px; width: auto; display: inline-flex;">Sync Now</button>
+  </div>
 
   <!-- Selection / Binding Card -->
   <div class="card">
@@ -265,7 +282,7 @@
     
     <div id="binding-form" style="display: none; margin-top: 10px;">
       <div class="flex-row">
-        <input type="text" id="bind-key-input" placeholder="e.g. landing.hero.title" style="margin-bottom: 0;">
+        <input type="text" id="bind-key-input" placeholder="e.g. landing.hero.title" style="margin-bottom: 0; flex: 1;">
         <button id="btn-bind" class="btn" style="width: auto; padding-left: 12px; padding-right: 12px;">Bind</button>
         <button id="btn-unbind" class="btn btn-secondary" style="width: auto; padding-left: 12px; padding-right: 12px; display: none;">Unbind</button>
       </div>
@@ -281,23 +298,31 @@
     </div>
   </div>
 
-  <!-- Sync Controls Card -->
+  <!-- GitHub Settings Card -->
   <div class="card">
-    <label>Google Sheet ID</label>
+    <label>GitHub Repository</label>
+    <input type="text" id="gh-repo" value="" placeholder="e.g. owner/repo">
+
+    <label>CSV File Path</label>
+    <input type="text" id="gh-path" value="copy.csv" placeholder="e.g. data/copy.csv">
+
     <div class="flex-row">
-      <input type="text" id="sheet-id" value="" placeholder="e.g. 18T7m-9xT_d2hKkU5Fk6q5p_rYQp77_O5zS5a417u7B0" style="margin-bottom: 0;">
-      <button id="btn-refresh" class="btn btn-secondary" style="width: auto; padding-left: 12px; padding-right: 12px; height: 38px; display: flex; align-items: center; gap: 4px;">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-        Refresh
-      </button>
+      <div style="flex: 2;">
+        <label>Branch</label>
+        <input type="text" id="gh-branch" value="main" placeholder="e.g. main" style="margin-bottom: 0;">
+      </div>
+      <div style="flex: 1.2;">
+        <label>&nbsp;</label>
+        <button id="btn-refresh" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 0;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          Check GitHub
+        </button>
+      </div>
     </div>
+
+    <label style="margin-top: 10px;">GitHub Access Token (Optional)</label>
+    <input type="password" id="gh-token" value="" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
     
-    <label style="margin-top: 10px;">Google Cloud API Key (Optional)</label>
-    <input type="password" id="api-key" value="" placeholder="Enter API Key for direct sync without server" style="margin-bottom: 12px;">
-
-    <label>Sync Server URL (Used if API Key is empty)</label>
-    <input type="text" id="server-url" value="http://localhost:3000" placeholder="e.g. http://localhost:3000">
-
     <label>Target Staging Environment</label>
     <div class="stage-selector">
       <div class="stage-option active" data-stage="draft">Draft</div>
@@ -319,26 +344,29 @@
   <script>
     let activeStage = 'draft';
     let selectedNodeId = null;
-    let availableKeys = []; // Array of string keys fetched from server
+    let availableKeys = []; // Array of string keys parsed from GitHub CSV
     let boundKeysList = []; // Array of string keys bound in Figma
+    
+    let documentSha = "";     // Last synced SHA stored in Figma document metadata
+    let latestCommitSha = "";  // Newest SHA fetched from GitHub
 
-    // Load configurations safely from localStorage if they exist (prevents iframe SecurityError)
+    // Load configurations safely from localStorage
     try {
-      if (localStorage.getItem('copyflow-server-url')) {
-        document.getElementById('server-url').value = localStorage.getItem('copyflow-server-url');
+      if (localStorage.getItem('copyflow-gh-repo')) {
+        document.getElementById('gh-repo').value = localStorage.getItem('copyflow-gh-repo');
       }
-      if (localStorage.getItem('copyflow-sheet-id')) {
-        document.getElementById('sheet-id').value = localStorage.getItem('copyflow-sheet-id');
+      if (localStorage.getItem('copyflow-gh-path')) {
+        document.getElementById('gh-path').value = localStorage.getItem('copyflow-gh-path');
       }
-      if (localStorage.getItem('copyflow-api-key')) {
-        document.getElementById('api-key').value = localStorage.getItem('copyflow-api-key');
+      if (localStorage.getItem('copyflow-gh-branch')) {
+        document.getElementById('gh-branch').value = localStorage.getItem('copyflow-gh-branch');
+      }
+      if (localStorage.getItem('copyflow-gh-token')) {
+        document.getElementById('gh-token').value = localStorage.getItem('copyflow-gh-token');
       }
     } catch (e) {
       console.warn("localStorage is blocked in this sandbox:", e.message);
     }
-
-    // Initialize: Try to fetch default keys list
-    fetchKeysList();
 
     // Tab Switcher
     const options = document.querySelectorAll('.stage-option');
@@ -351,20 +379,24 @@
       });
     });
 
-    // Auto-fetch list when sheet ID input changes
-    document.getElementById('sheet-id').addEventListener('input', () => {
-      fetchKeysList();
-    });
+    // Auto-fetch/check when Repo or Path inputs change
+    document.getElementById('gh-repo').addEventListener('change', () => fetchLatestCommit());
+    document.getElementById('gh-path').addEventListener('change', () => fetchLatestCommit());
+    document.getElementById('gh-branch').addEventListener('change', () => fetchLatestCommit());
 
     // Manual Refresh button
     document.getElementById('btn-refresh').addEventListener('click', () => {
-      log("Refreshing copy keys list...", "info");
-      fetchKeysList(true);
+      fetchLatestCommit(true);
     });
 
     // Search Filtering
     document.getElementById('search-input').addEventListener('input', () => {
       renderKeysExplorer();
+    });
+
+    // Sync Now banner action
+    document.getElementById('btn-sync-now').addEventListener('click', () => {
+      performSync();
     });
 
     // Logging helper
@@ -383,7 +415,7 @@
       const query = document.getElementById('search-input').value.toLowerCase().trim();
       
       if (availableKeys.length === 0) {
-        container.innerHTML = `<div style="padding: 12px; text-align: center; color: var(--text-secondary);">No keys available. Connect to server or enter API key.</div>`;
+        container.innerHTML = `<div style="padding: 12px; text-align: center; color: var(--text-secondary);">No keys available. Connect to GitHub.</div>`;
         return;
       }
 
@@ -419,24 +451,71 @@
       });
     }
 
-    // Parse Google Sheets API v4 ValueRange JSON array
-    function parseValueRange(values) {
+    // Robust RFC 4180 CSV parser
+    function parseCsv(csvText) {
       const result = {};
-      if (!values || values.length <= 1) return result;
+      const rows = [];
+      let currentField = '';
+      let inQuotes = false;
+      let currentRow = [];
+
+      for (let i = 0; i < csvText.length; i++) {
+        const char = csvText[i];
+        const nextChar = csvText[i + 1];
+
+        if (inQuotes) {
+          if (char === '"') {
+            if (nextChar === '"') {
+              currentField += '"';
+              i++; // skip next quote
+            } else {
+              inQuotes = false;
+            }
+          } else {
+            currentField += char;
+          }
+        } else {
+          if (char === '"') {
+            inQuotes = true;
+          } else if (char === ',') {
+            currentRow.push(currentField.trim());
+            currentField = '';
+          } else if (char === '\r' || char === '\n') {
+            currentRow.push(currentField.trim());
+            currentField = '';
+            if (currentRow.length > 0 && currentRow.some(f => f !== '')) {
+              rows.push(currentRow);
+            }
+            currentRow = [];
+            if (char === '\r' && nextChar === '\n') {
+              i++;
+            }
+          } else {
+            currentField += char;
+          }
+        }
+      }
       
-      const headers = values[0].map(h => h.toLowerCase().trim());
+      if (currentField || currentRow.length > 0) {
+        currentRow.push(currentField.trim());
+        rows.push(currentRow);
+      }
+
+      if (rows.length <= 1) return result;
+      
+      const headers = rows[0].map(h => h.toLowerCase().trim());
       const keyIdx = headers.indexOf('key');
       const draftIdx = headers.indexOf('draft');
       const approvedIdx = headers.indexOf('approved');
       const limitIdx = headers.indexOf('character limit');
 
       if (keyIdx === -1) {
-        log("Google Sheet is missing a column header named 'Key'.", "warning");
+        log("CSV is missing a 'Key' column header.", "warning");
         return result;
       }
 
-      for (let i = 1; i < values.length; i++) {
-        const row = values[i];
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
         const key = row[keyIdx];
         if (!key) continue;
 
@@ -453,66 +532,123 @@
       return result;
     }
 
-    // Helper to fetch keys list (either directly from Google API or local server proxy)
-    async function fetchKeysList(isManual = false) {
-      const serverUrl = document.getElementById('server-url').value.trim();
-      const sheetId = document.getElementById('sheet-id').value.trim();
-      const apiKey = document.getElementById('api-key').value.trim();
+    // Fetch latest commit metadata for version checking
+    async function fetchLatestCommit(isManual = false) {
+      const repo = document.getElementById('gh-repo').value.trim();
+      const filePath = document.getElementById('gh-path').value.trim();
+      const branch = document.getElementById('gh-branch').value.trim() || 'main';
+      const token = document.getElementById('gh-token').value.trim();
 
-      if (apiKey) {
-        if (!sheetId) {
-          if (isManual) log("Please enter a Google Sheet ID.", "warning");
+      if (!repo || !filePath) {
+        if (isManual) log("Please enter GitHub Repository (owner/repo) and CSV File Path.", "warning");
+        return;
+      }
+
+      // Save credentials locally
+      try {
+        localStorage.setItem('copyflow-gh-repo', repo);
+        localStorage.setItem('copyflow-gh-path', filePath);
+        localStorage.setItem('copyflow-gh-branch', branch);
+        localStorage.setItem('copyflow-gh-token', token);
+      } catch (e) {}
+
+      const url = `https://api.github.com/repos/${repo}/commits?path=${encodeURIComponent(filePath)}&sha=${encodeURIComponent(branch)}&per_page=1`;
+      const headers = {
+        'Accept': 'application/vnd.github.v3+json'
+      };
+      if (token) {
+        headers['Authorization'] = `token ${token}`;
+      }
+
+      if (isManual) log("Checking GitHub for updates...", "info");
+
+      try {
+        const res = await fetch(url, { headers });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        
+        const commits = await res.json();
+        if (commits.length === 0) {
+          log(`No commits found for file "${filePath}" on branch "${branch}".`, 'warning');
           return;
         }
-        // Direct Sheets API query (CORS-enabled)
-        const range = "A:E";
-        const fetchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}&_t=${Date.now()}`;
-        
-        try {
-          const res = await fetch(fetchUrl);
-          if (res.ok) {
-            const data = await res.json();
-            const copyData = parseValueRange(data.values);
-            availableKeys = Object.keys(copyData);
-            renderKeysExplorer();
-            if (isManual) {
-              log(`Direct Sync: Refreshed keys. Found ${availableKeys.length} keys.`, 'success');
-            }
-          } else {
-            const errData = await res.json();
-            throw new Error(errData.error ? errData.error.message : `HTTP ${res.status}`);
-          }
-        } catch (err) {
-          if (isManual) {
-            log(`Direct Fetch Failed: ${err.message}`, 'warning');
-          }
-        }
-      } else {
-        // Fallback to local server proxy
-        let fetchUrl = `${serverUrl}/api/copy?_t=${Date.now()}`;
-        if (sheetId) {
-          fetchUrl += `&sheetId=${encodeURIComponent(sheetId)}`;
-        }
 
-        try {
-          const res = await fetch(fetchUrl);
-          if (res.ok) {
-            const data = await res.json();
-            availableKeys = Object.keys(data);
-            renderKeysExplorer();
-            if (isManual) {
-              log(`Server Sync: Refreshed keys. Found ${availableKeys.length} keys.`, 'success');
-            }
-          } else {
-            throw new Error(`HTTP ${res.status}`);
-          }
-        } catch (err) {
-          if (isManual) {
-            log(`Server Fetch Failed: ${err.message}. Make sure sync server is running.`, 'warning');
-          }
+        const latestCommit = commits[0];
+        latestCommitSha = latestCommit.sha;
+        const commitMsg = latestCommit.commit.message;
+        const author = latestCommit.commit.author.name;
+        const commitDate = new Date(latestCommit.commit.author.date).toLocaleString();
+
+        // Download CSV file to parse keys
+        const copyData = await downloadCopyFile(repo, filePath, branch, token);
+        availableKeys = Object.keys(copyData);
+        renderKeysExplorer();
+
+        // Compare commit SHA with currently synced doc SHA
+        const banner = document.getElementById('update-alert-banner');
+        if (latestCommitSha !== documentSha) {
+          document.getElementById('alert-commit-msg').textContent = `"${commitMsg}"`;
+          document.getElementById('alert-commit-meta').textContent = `By ${author} on ${commitDate}`;
+          banner.style.display = 'block';
+          if (isManual) log(`New copy version found: ${latestCommitSha.substring(0, 7)}`, 'info');
+        } else {
+          banner.style.display = 'none';
+          if (isManual) log(`Figma is already up-to-date with latest commit: ${latestCommitSha.substring(0, 7)}`, 'success');
         }
+      } catch (err) {
+        log(`GitHub Check Failed: ${err.message}`, 'warning');
       }
     }
+
+    // Helper to download raw CSV from GitHub (supports public & private repos)
+    async function downloadCopyFile(repo, filePath, branch, token) {
+      let url;
+      const headers = {};
+
+      if (token) {
+        // Private repo raw Contents API fetch
+        url = `https://api.github.com/repos/${repo}/contents/${filePath}?ref=${branch}`;
+        headers['Authorization'] = `token ${token}`;
+        headers['Accept'] = 'application/vnd.github.v3.raw';
+      } else {
+        // Public raw content fetch
+        url = `https://raw.githubusercontent.com/${repo}/${branch}/${filePath}?_t=${Date.now()}`;
+      }
+
+      const res = await fetch(url, { headers });
+      if (!res.ok) throw new Error(`Failed to download file: HTTP ${res.status}`);
+      const csvText = await res.text();
+      return parseCsv(csvText);
+    }
+
+    // Trigger standard sync flow
+    async function performSync() {
+      const repo = document.getElementById('gh-repo').value.trim();
+      const filePath = document.getElementById('gh-path').value.trim();
+      const branch = document.getElementById('gh-branch').value.trim() || 'main';
+      const token = document.getElementById('gh-token').value.trim();
+
+      log("Downloading latest copy from GitHub...", "info");
+      try {
+        const copyData = await downloadCopyFile(repo, filePath, branch, token);
+        log("Copy downloaded. Syncing layers...", "success");
+
+        parent.postMessage({
+          pluginMessage: {
+            type: 'sync-layers',
+            copyData,
+            stage: activeStage,
+            sha: latestCommitSha
+          }
+        }, '*');
+      } catch (err) {
+        log(`Sync failed: ${err.message}`, "warning");
+      }
+    }
+
+    // Sync button trigger
+    document.getElementById('btn-sync').addEventListener('click', () => {
+      performSync();
+    });
 
     // Message handler from Figma main thread
     window.onmessage = (event) => {
@@ -526,7 +662,17 @@
         const unbindBtn = document.getElementById('btn-unbind');
 
         boundKeysList = msg.boundKeys || [];
+        documentSha = msg.lastSyncedSha || "";
+        
         renderKeysExplorer();
+
+        // Refresh banner display based on new documentSha
+        const banner = document.getElementById('update-alert-banner');
+        if (latestCommitSha && latestCommitSha !== documentSha) {
+          banner.style.display = 'block';
+        } else {
+          banner.style.display = 'none';
+        }
 
         if (msg.selected) {
           selectedNodeId = msg.nodeId;
@@ -557,7 +703,7 @@
 
       if (msg.type === 'sync-complete') {
         log(`Sync finished. Updated ${msg.updatedCount} layers. Warnings: ${msg.overflowCount}`, 'success');
-        fetchKeysList();
+        fetchLatestCommit();
       }
     };
 
@@ -573,72 +719,7 @@
       parent.postMessage({ pluginMessage: { type: 'unbind-key' } }, '*');
     });
 
-    // Fetch and Sync action
-    document.getElementById('btn-sync').addEventListener('click', async () => {
-      const serverUrl = document.getElementById('server-url').value.trim();
-      const sheetId = document.getElementById('sheet-id').value.trim();
-      const apiKey = document.getElementById('api-key').value.trim();
-
-      try {
-        localStorage.setItem('copyflow-server-url', serverUrl);
-        localStorage.setItem('copyflow-sheet-id', sheetId);
-        localStorage.setItem('copyflow-api-key', apiKey);
-      } catch (e) {
-        // Ignore storage blockers
-      }
-
-      let copyData = null;
-
-      if (apiKey) {
-        if (!sheetId) {
-          log("Please enter a Google Sheet ID to sync.", "warning");
-          return;
-        }
-        const range = "A:E";
-        const fetchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?key=${apiKey}&_t=${Date.now()}`;
-        
-        log(`Direct Sync: Fetching copy from Google Sheets API...`, 'info');
-        try {
-          const res = await fetch(fetchUrl);
-          if (!res.ok) {
-            const errData = await res.json();
-            throw new Error(errData.error ? errData.error.message : `HTTP ${res.status}`);
-          }
-          const data = await res.json();
-          copyData = parseValueRange(data.values);
-        } catch (err) {
-          log(`Direct Sync Failed: ${err.message}`, 'warning');
-          return;
-        }
-      } else {
-        let fetchUrl = `${serverUrl}/api/copy?_t=${Date.now()}`;
-        if (sheetId) {
-          fetchUrl += `&sheetId=${encodeURIComponent(sheetId)}`;
-        }
-
-        log(`Server Sync: Fetching copy from ${fetchUrl}...`, 'info');
-        try {
-          const res = await fetch(fetchUrl);
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          copyData = await res.json();
-        } catch (err) {
-          log(`Server Sync Failed: ${err.message}. Make sure sync server is running.`, 'warning');
-          return;
-        }
-      }
-
-      availableKeys = Object.keys(copyData);
-      log(`Fetched ${availableKeys.length} copy keys successfully. Syncing to layers...`, 'success');
-      
-      parent.postMessage({
-        pluginMessage: {
-          type: 'sync-layers',
-          copyData,
-          stage: activeStage
-        }
-      }, '*');
-    });
-
+    // Helper to escape html characters safely
     function escapeHtml(str) {
       return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }

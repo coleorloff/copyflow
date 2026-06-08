@@ -25,6 +25,8 @@ function sendSelectionToUI() {
     return node.getPluginData("copy-key") || node.name;
   }).filter(key => !!key);
 
+  const lastSyncedSha = figma.root.getPluginData("last-synced-sha") || "";
+
   if (selection.length === 1 && selection[0].type === "TEXT") {
     const node = selection[0];
     const key = node.getPluginData("copy-key") || "";
@@ -35,13 +37,15 @@ function sendSelectionToUI() {
       nodeName: node.name,
       currentText: node.characters,
       key: key,
-      boundKeys: boundKeys
+      boundKeys: boundKeys,
+      lastSyncedSha: lastSyncedSha
     });
   } else {
     figma.ui.postMessage({
       type: "selection-changed",
       selected: false,
-      boundKeys: boundKeys
+      boundKeys: boundKeys,
+      lastSyncedSha: lastSyncedSha
     });
   }
 }
@@ -85,7 +89,7 @@ figma.ui.onmessage = async (msg) => {
   }
 
   if (msg.type === "sync-layers") {
-    const { copyData, stage } = msg; // stage can be 'draft' or 'approved'
+    const { copyData, stage, sha } = msg; // stage can be 'draft' or 'approved'
     const textNodes = figma.currentPage.findAll(node => node.type === "TEXT");
     
     let updatedCount = 0;
@@ -121,11 +125,18 @@ figma.ui.onmessage = async (msg) => {
       }
     }
 
+    if (sha) {
+      figma.root.setPluginData("last-synced-sha", sha);
+    }
+
     figma.notify(`Synced ${updatedCount} layers (${overflowCount} warnings).`);
     figma.ui.postMessage({
       type: "sync-complete",
       updatedCount,
       overflowCount
     });
+    
+    // Refresh selection states to broadcast updated SHA
+    sendSelectionToUI();
   }
 };
