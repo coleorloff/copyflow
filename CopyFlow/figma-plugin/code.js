@@ -83,15 +83,15 @@ figma.ui.onmessage = async (msg) => {
   }
 
   if (msg.type === "sync-layers") {
-    const { copyData, stage, sha, syncAll } = msg; // stage holds version name (e.g. 'Copy V1'), syncAll is boolean
+    const { copyData, stage, sha, syncAll, selectedKeys } = msg; // selectedKeys is an array of checked key names
     
     let nodesToSync = [];
     if (syncAll) {
       nodesToSync = figma.currentPage.findAll(node => node.type === "TEXT");
     } else {
-      // Sync selected text node only
-      const selection = figma.currentPage.selection;
-      nodesToSync = selection.filter(node => node.type === "TEXT");
+      // Sync text layers whose names are included in selectedKeys array
+      const keysToSync = selectedKeys || [];
+      nodesToSync = figma.currentPage.findAll(node => node.type === "TEXT" && keysToSync.includes(node.name));
     }
     
     let updatedCount = 0;

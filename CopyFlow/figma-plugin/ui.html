@@ -307,14 +307,10 @@
     </div>
     
     <div id="explorer-body">
-      <!-- Embedded Canvas Selection Status -->
-      <div id="selection-status-bar" style="background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-        <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex-grow: 1; margin-right: 8px;">
-          <span style="color: var(--text-secondary); font-size: 11px;">Selected:</span> 
-          <span id="selected-layer-name" style="font-weight:600; font-size: 11px; overflow: hidden; text-overflow: ellipsis;">None</span>
-          <span id="selected-layer-match-badge" class="key-status unbound" style="display:none; padding: 1px 5px; font-size: 9px;">Unmatched</span>
-        </div>
-        <button id="btn-unbind" class="btn btn-secondary" style="width: auto; padding: 2px 6px; font-size: 10px; display: none; height: 20px; border-radius: 4px; line-height: 1;" title="Reset layer name to raw characters">Reset Name</button>
+      <!-- Checked count & Deselect All Header Actions -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span id="checked-count" style="font-size: 11px; color: var(--text-secondary);">0 keys selected</span>
+        <button id="btn-deselect-all" class="btn-secondary" style="border: none; padding: 2px 6px; font-size: 11px; border-radius: 4px; display: none; color: var(--primary);">Deselect All</button>
       </div>
 
       <input type="text" id="search-input" placeholder="🔍 Search copy keys..." style="margin-bottom: 0;">
@@ -336,7 +332,7 @@
   </div>
 
   <script>
-    let selectedNodeId = null;
+    let selectedKeys = new Set(); // Stores checked copy key strings for Sync Selected Only
     let availableKeys = []; // Array of string keys parsed from GitHub CSV
     let boundKeysList = []; // Array of string keys bound in Figma (all text layer names)
     
@@ -409,9 +405,11 @@
       performSync(true);
     });
 
-    // Reset Name button action
-    document.getElementById('btn-unbind').addEventListener('click', () => {
-      parent.postMessage({ pluginMessage: { type: 'unbind-key' } }, '*');
+    // Deselect All button action
+    document.getElementById('btn-deselect-all').addEventListener('click', () => {
+      selectedKeys.clear();
+      updateSelectionControls();
+      renderKeysExplorer();
     });
 
     // Logging helper
@@ -424,7 +422,7 @@
       consoleEl.scrollTop = consoleEl.scrollHeight;
     }
 
-    // Render Key Explorer List
+    // Render Key Explorer List with check toggles
     function renderKeysExplorer() {
       const container = document.getElementById('keys-list');
       const query = document.getElementById('search-input').value.toLowerCase().trim();
@@ -447,23 +445,60 @@
         item.className = 'key-item';
         
         const isBound = boundKeysList.includes(key);
+        const isChecked = selectedKeys.has(key);
         
         item.innerHTML = `
-          <div class="key-name" title="${escapeHtml(key)}">${escapeHtml(key)}</div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-grow: 1; overflow: hidden;">
+            <input type="checkbox" class="key-checkbox" data-key="${escapeHtml(key)}" ${isChecked ? 'checked' : ''} style="width: auto; margin-bottom: 0; cursor: pointer;">
+            <div class="key-name" title="${escapeHtml(key)}">${escapeHtml(key)}</div>
+          </div>
           <span class="key-status bound" style="display:${isBound ? 'inline-block' : 'none'};">Matched</span>
         `;
         
-        // Click to rename selected element to this key
-        item.addEventListener('click', () => {
-          if (selectedNodeId) {
-            parent.postMessage({ pluginMessage: { type: 'bind-key', key } }, '*');
-          } else {
-            log(`Cannot rename: Please select a single text layer in Figma first.`, 'warning');
-          }
+        // Let clicking the list row (except the checkbox itself) toggle check state
+        item.addEventListener('click', (e) => {
+          if (e.target.type === 'checkbox') return;
+          const cb = item.querySelector('.key-checkbox');
+          cb.checked = !cb.checked;
+          toggleKeyChecked(key, cb.checked);
+        });
+
+        // Handle checkbox click
+        const checkbox = item.querySelector('.key-checkbox');
+        checkbox.addEventListener('change', (e) => {
+          toggleKeyChecked(key, e.target.checked);
         });
         
         container.appendChild(item);
       });
+    }
+
+    // Helper to toggle checkbox values
+    function toggleKeyChecked(key, isChecked) {
+      if (isChecked) {
+        selectedKeys.add(key);
+      } else {
+        selectedKeys.delete(key);
+      }
+      updateSelectionControls();
+    }
+
+    // Update the visibility and enabled states of selection controls
+    function updateSelectionControls() {
+      const countLabel = document.getElementById('checked-count');
+      const deselectBtn = document.getElementById('btn-deselect-all');
+      const syncSelectedBtn = document.getElementById('btn-sync-selected');
+
+      const count = selectedKeys.size;
+      countLabel.textContent = `${count} key${count === 1 ? '' : 's'} selected`;
+
+      if (count > 0) {
+        deselectBtn.style.display = 'inline-block';
+        syncSelectedBtn.removeAttribute('disabled');
+      } else {
+        deselectBtn.style.display = 'none';
+        syncSelectedBtn.setAttribute('disabled', 'true');
+      }
     }
 
     // Update dynamic version options in dropdown select without losing selection
@@ -694,7 +729,8 @@
           copyData: cachedCopyData,
           stage: selectedVersion,
           sha: latestCommitSha,
-          syncAll: syncAll
+          syncAll: syncAll,
+          selectedKeys: Array.from(selectedKeys)
         }
       }, '*');
     }
@@ -714,11 +750,6 @@
       if (!msg) return;
 
       if (msg.type === 'selection-changed') {
-        const selectedLayerName = document.getElementById('selected-layer-name');
-        const selectedLayerMatchBadge = document.getElementById('selected-layer-match-badge');
-        const unbindBtn = document.getElementById('btn-unbind');
-        const btnSyncSelected = document.getElementById('btn-sync-selected');
-
         boundKeysList = msg.boundKeys || [];
         documentSha = msg.lastSyncedSha || "";
         
@@ -730,31 +761,6 @@
           banner.style.display = 'block';
         } else {
           banner.style.display = 'none';
-        }
-
-        if (msg.selected) {
-          selectedNodeId = msg.nodeId;
-          selectedLayerName.textContent = msg.nodeName;
-          unbindBtn.style.display = "inline-block";
-          btnSyncSelected.removeAttribute('disabled');
-          
-          // Check if selected layer's name matches a key from the spreadsheet
-          const hasMatch = availableKeys.includes(msg.nodeName);
-          if (hasMatch) {
-            selectedLayerMatchBadge.textContent = "Matched";
-            selectedLayerMatchBadge.className = "key-status bound";
-            selectedLayerMatchBadge.style.display = "inline-flex";
-          } else {
-            selectedLayerMatchBadge.textContent = "Unmatched";
-            selectedLayerMatchBadge.className = "key-status unbound";
-            selectedLayerMatchBadge.style.display = "inline-flex";
-          }
-        } else {
-          selectedNodeId = null;
-          selectedLayerName.textContent = "None";
-          selectedLayerMatchBadge.style.display = "none";
-          unbindBtn.style.display = "none";
-          btnSyncSelected.setAttribute('disabled', 'true');
         }
       }
 
