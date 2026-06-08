@@ -22,7 +22,21 @@ function fetchWithRedirects(urlStr, headers, callback, redirectCount = 0) {
         const parsedUrl = new URL(urlStr);
         redirectUrl = `${parsedUrl.protocol}//${parsedUrl.host}${redirectUrl}`;
       }
-      fetchWithRedirects(redirectUrl, headers, callback, redirectCount + 1);
+      
+      // Strip Authorization header if redirecting to a different host (prevents 401s on Google sandbox subdomains)
+      const nextHeaders = { ...headers };
+      try {
+        const currentHost = new URL(urlStr).host;
+        const nextHost = new URL(redirectUrl).host;
+        if (currentHost !== nextHost) {
+          delete nextHeaders['Authorization'];
+        }
+      } catch (e) {
+        // Fallback if URL parsing fails
+        delete nextHeaders['Authorization'];
+      }
+      
+      fetchWithRedirects(redirectUrl, nextHeaders, callback, redirectCount + 1);
     } else {
       callback(null, res);
     }
