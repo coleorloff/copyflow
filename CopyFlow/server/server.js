@@ -15,7 +15,13 @@ function fetchWithRedirects(urlStr, headers, callback, redirectCount = 0) {
     headers: headers || {}
   };
   
+  console.log(`[Fetch Hop ${redirectCount}] Fetching URL: ${urlStr}`);
+  console.log(`[Fetch Hop ${redirectCount}] Request Headers:`, JSON.stringify(Object.keys(options.headers)));
+  
   https.get(urlStr, options, (res) => {
+    console.log(`[Fetch Response ${redirectCount}] Status Code: ${res.statusCode}`);
+    console.log(`[Fetch Response ${redirectCount}] Location Header: ${res.headers.location || 'none'}`);
+    
     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
       let redirectUrl = res.headers.location;
       if (!redirectUrl.startsWith('http')) {
@@ -29,6 +35,7 @@ function fetchWithRedirects(urlStr, headers, callback, redirectCount = 0) {
         const currentHost = new URL(urlStr).host;
         const nextHost = new URL(redirectUrl).host;
         if (currentHost !== nextHost) {
+          console.log(`[Fetch Hop ${redirectCount}] Host changed from ${currentHost} to ${nextHost}. Stripping Authorization header.`);
           delete nextHeaders['Authorization'];
         }
       } catch (e) {
@@ -41,6 +48,7 @@ function fetchWithRedirects(urlStr, headers, callback, redirectCount = 0) {
       callback(null, res);
     }
   }).on('error', (err) => {
+    console.error(`[Fetch Error ${redirectCount}]`, err);
     callback(err);
   });
 }
@@ -269,6 +277,10 @@ const server = http.createServer((req, res) => {
     const token = parsedUrl.query.token;
     const oauthToken = parsedUrl.query.oauth_token;
     
+    console.log(`[Proxy] Incoming request for URL: ${targetUrl}`);
+    console.log(`[Proxy] Access Token provided: ${token ? 'yes' : 'no'}`);
+    console.log(`[Proxy] OAuth Token provided length: ${oauthToken ? oauthToken.length : 0}`);
+    
     if (!targetUrl) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: { message: "Missing url parameter" } }));
@@ -284,6 +296,7 @@ const server = http.createServer((req, res) => {
     
     fetchWithRedirects(fetchUrl, reqHeaders, (err, googleRes) => {
       if (err) {
+        console.error("[Proxy Error] Fetch failed:", err.message);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: { message: err.message } }));
         return;
@@ -292,6 +305,7 @@ const server = http.createServer((req, res) => {
       let data = '';
       googleRes.on('data', (chunk) => { data += chunk; });
       googleRes.on('end', () => {
+        console.log(`[Proxy Complete] Google Res status: ${googleRes.statusCode}, Data length: ${data.length}`);
         res.writeHead(googleRes.statusCode, { 'Content-Type': 'application/json' });
         res.end(data);
       });
