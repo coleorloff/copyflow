@@ -4,21 +4,25 @@ const url = require('url');
 const fs = require('fs');
 const path = require('path');
 
-// Helper to recursively follow HTTP redirects (max 5 hops)
-function fetchWithRedirects(urlStr, callback, redirectCount = 0) {
+// Helper to recursively follow HTTP redirects (max 5 hops) with custom headers
+function fetchWithRedirects(urlStr, headers, callback, redirectCount = 0) {
   if (redirectCount > 5) {
     callback(new Error("Too many redirects"));
     return;
   }
   
-  https.get(urlStr, (res) => {
+  const options = {
+    headers: headers || {}
+  };
+  
+  https.get(urlStr, options, (res) => {
     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
       let redirectUrl = res.headers.location;
       if (!redirectUrl.startsWith('http')) {
         const parsedUrl = new URL(urlStr);
         redirectUrl = `${parsedUrl.protocol}//${parsedUrl.host}${redirectUrl}`;
       }
-      fetchWithRedirects(redirectUrl, callback, redirectCount + 1);
+      fetchWithRedirects(redirectUrl, headers, callback, redirectCount + 1);
     } else {
       callback(null, res);
     }
@@ -249,6 +253,7 @@ const server = http.createServer((req, res) => {
   if (pathName === '/api/sheets-proxy') {
     const targetUrl = parsedUrl.query.url;
     const token = parsedUrl.query.token;
+    const oauthToken = parsedUrl.query.oauth_token;
     
     if (!targetUrl) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -258,7 +263,12 @@ const server = http.createServer((req, res) => {
     
     const fetchUrl = token ? `${targetUrl}?token=${encodeURIComponent(token)}` : targetUrl;
     
-    fetchWithRedirects(fetchUrl, (err, googleRes) => {
+    const reqHeaders = {};
+    if (oauthToken) {
+      reqHeaders['Authorization'] = `Bearer ${oauthToken}`;
+    }
+    
+    fetchWithRedirects(fetchUrl, reqHeaders, (err, googleRes) => {
       if (err) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: { message: err.message } }));

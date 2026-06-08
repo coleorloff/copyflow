@@ -278,6 +278,9 @@
 
       <label>Secret Access Token</label>
       <input type="password" id="gas-token" value="CopyFlowSecret2026" placeholder="Enter secret token">
+
+      <label>Google OAuth Access Token (For Corporate SSO, optional)</label>
+      <input type="password" id="gas-oauth-token" value="" placeholder="Paste gcloud auth print-access-token output">
     </div>
 
     <button id="btn-refresh" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; font-weight: 600; border-color: var(--primary); color: var(--primary); margin-top: 8px;">
@@ -395,6 +398,9 @@
       } else {
         document.getElementById('gas-token').value = "CopyFlowSecret2026";
       }
+      if (localStorage.getItem('copyflow-gas-oauth-token')) {
+        document.getElementById('gas-oauth-token').value = localStorage.getItem('copyflow-gas-oauth-token');
+      }
     } catch (e) {
       console.warn("localStorage is blocked in this sandbox:", e.message);
     }
@@ -444,6 +450,7 @@
     document.getElementById('gh-branch').addEventListener('change', () => fetchLatestData());
     document.getElementById('gas-url').addEventListener('change', () => fetchLatestData());
     document.getElementById('gas-token').addEventListener('change', () => fetchLatestData());
+    document.getElementById('gas-oauth-token').addEventListener('change', () => fetchLatestData());
 
     document.getElementById('sync-provider').addEventListener('change', (e) => {
       const provider = e.target.value;
@@ -823,6 +830,7 @@
     async function fetchLatestGoogleSheets(isManual = false) {
       const url = document.getElementById('gas-url').value.trim();
       const token = document.getElementById('gas-token').value.trim();
+      const oauthToken = document.getElementById('gas-oauth-token').value.trim();
 
       if (!url) {
         if (isManual) log("Please enter the Web App URL.", "warning");
@@ -833,6 +841,7 @@
       try {
         localStorage.setItem('copyflow-gas-url', url);
         localStorage.setItem('copyflow-gas-token', token);
+        localStorage.setItem('copyflow-gas-oauth-token', oauthToken);
       } catch (e) {}
 
       if (isManual) log("Fetching from Google Sheets...", "info");
@@ -842,6 +851,9 @@
         let proxyUrl = `http://localhost:3000/api/sheets-proxy?url=${encodeURIComponent(url)}`;
         if (token) {
           proxyUrl += `&token=${encodeURIComponent(token)}`;
+        }
+        if (oauthToken) {
+          proxyUrl += `&oauth_token=${encodeURIComponent(oauthToken)}`;
         }
         
         const res = await fetch(proxyUrl);
