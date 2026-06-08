@@ -252,17 +252,33 @@
 
   <!-- Collapsible Settings Panel -->
   <div id="settings-panel" class="card" style="display: none; padding-top: 10px; margin-bottom: 12px;">
-    <label>GitHub Repository</label>
-    <input type="text" id="gh-repo" value="coleorloff/copyflow" placeholder="e.g. owner/repo">
+    <label>Sync Provider</label>
+    <select id="sync-provider" style="margin-bottom: 12px;">
+      <option value="github">GitHub Sync</option>
+      <option value="google-sheets">Google Sheets Sync</option>
+    </select>
 
-    <label>CSV File Path</label>
-    <input type="text" id="gh-path" value="CopyFlow/data/copy.csv" placeholder="e.g. data/copy.csv">
+    <div id="github-settings-group">
+      <label>GitHub Repository</label>
+      <input type="text" id="gh-repo" value="coleorloff/copyflow" placeholder="e.g. owner/repo">
 
-    <label>Branch</label>
-    <input type="text" id="gh-branch" value="main" placeholder="e.g. main">
+      <label>CSV File Path</label>
+      <input type="text" id="gh-path" value="CopyFlow/data/copy.csv" placeholder="e.g. data/copy.csv">
 
-    <label>GitHub Access Token</label>
-    <input type="password" id="gh-token" value="" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+      <label>Branch</label>
+      <input type="text" id="gh-branch" value="main" placeholder="e.g. main">
+
+      <label>GitHub Access Token</label>
+      <input type="password" id="gh-token" value="" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+    </div>
+
+    <div id="google-sheets-settings-group" style="display: none;">
+      <label>Web App URL</label>
+      <input type="text" id="gas-url" value="" placeholder="https://script.google.com/macros/s/.../exec">
+
+      <label>Secret Access Token</label>
+      <input type="password" id="gas-token" value="" placeholder="Enter secret token">
+    </div>
 
     <button id="btn-refresh" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; font-weight: 600; border-color: var(--primary); color: var(--primary); margin-top: 8px;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
@@ -294,7 +310,7 @@
 
   <!-- Update Alert Banner -->
   <div id="update-alert-banner" class="alert-banner">
-    <div style="font-weight: 600; margin-bottom: 2px;">🆕 New copy version on GitHub!</div>
+    <div id="alert-banner-title" style="font-weight: 600; margin-bottom: 2px;">🆕 New copy version!</div>
     <div id="alert-commit-msg" style="font-size: 11px; font-style: italic; opacity: 0.95; margin-bottom: 4px;">"Commit Message"</div>
     <div id="alert-commit-meta" style="font-size: 10px; opacity: 0.8; margin-bottom: 8px;">By Author (10 mins ago)</div>
     <button id="btn-sync-now" class="btn" style="background: white; color: #b45309; font-weight: 600; padding: 6px 12px; font-size: 11px; width: auto; display: inline-flex;">Sync Now</button>
@@ -341,18 +357,22 @@
 
   <script>
     let selectedKeys = new Set(); // Checked copy keys inside the plugin list
-    let availableKeys = []; // Array of string keys parsed from GitHub CSV
+    let availableKeys = []; // Array of string keys parsed from GitHub CSV or Google Sheets
     let boundKeysMap = {};  // Map of text layer name -> characters from Figma
     
     let selectedNodeName = ""; // Name of selected Figma text box
     let selectedNodeId = null;  // ID of selected Figma text box
 
     let documentSha = "";     // Last synced SHA stored in Figma document metadata
-    let latestCommitSha = "";  // Newest SHA fetched from GitHub
-    let cachedCopyData = {};   // Cached parsed CSV data
+    let latestCommitSha = "";  // Newest SHA fetched from GitHub or Hash from Google Sheets
+    let cachedCopyData = {};   // Cached parsed copy data
 
     // Load configurations safely from localStorage
     try {
+      const provider = localStorage.getItem('copyflow-sync-provider') || 'github';
+      document.getElementById('sync-provider').value = provider;
+      updateProviderSettingsVisibility(provider);
+
       if (localStorage.getItem('copyflow-gh-repo')) {
         document.getElementById('gh-repo').value = localStorage.getItem('copyflow-gh-repo');
       }
@@ -365,8 +385,26 @@
       if (localStorage.getItem('copyflow-gh-token')) {
         document.getElementById('gh-token').value = localStorage.getItem('copyflow-gh-token');
       }
+      if (localStorage.getItem('copyflow-gas-url')) {
+        document.getElementById('gas-url').value = localStorage.getItem('copyflow-gas-url');
+      }
+      if (localStorage.getItem('copyflow-gas-token')) {
+        document.getElementById('gas-token').value = localStorage.getItem('copyflow-gas-token');
+      }
     } catch (e) {
       console.warn("localStorage is blocked in this sandbox:", e.message);
+    }
+
+    function updateProviderSettingsVisibility(provider) {
+      const ghGroup = document.getElementById('github-settings-group');
+      const gasGroup = document.getElementById('google-sheets-settings-group');
+      if (provider === 'github') {
+        ghGroup.style.display = 'block';
+        gasGroup.style.display = 'none';
+      } else {
+        ghGroup.style.display = 'none';
+        gasGroup.style.display = 'block';
+      }
     }
 
     // Toggle settings panel
@@ -396,14 +434,25 @@
       btn.textContent = isHidden ? 'Hide' : 'Show';
     });
 
-    // Auto-fetch/check when Repo or Path inputs change
-    document.getElementById('gh-repo').addEventListener('change', () => fetchLatestCommit());
-    document.getElementById('gh-path').addEventListener('change', () => fetchLatestCommit());
-    document.getElementById('gh-branch').addEventListener('change', () => fetchLatestCommit());
+    // Auto-fetch/check when inputs change
+    document.getElementById('gh-repo').addEventListener('change', () => fetchLatestData());
+    document.getElementById('gh-path').addEventListener('change', () => fetchLatestData());
+    document.getElementById('gh-branch').addEventListener('change', () => fetchLatestData());
+    document.getElementById('gas-url').addEventListener('change', () => fetchLatestData());
+    document.getElementById('gas-token').addEventListener('change', () => fetchLatestData());
+
+    document.getElementById('sync-provider').addEventListener('change', (e) => {
+      const provider = e.target.value;
+      updateProviderSettingsVisibility(provider);
+      try {
+        localStorage.setItem('copyflow-sync-provider', provider);
+      } catch (ex) {}
+      fetchLatestData();
+    });
 
     // Connect & Fetch Latest button
     document.getElementById('btn-refresh').addEventListener('click', () => {
-      fetchLatestCommit(true);
+      fetchLatestData(true);
     });
 
     // Search Filtering
@@ -439,7 +488,9 @@
       const query = document.getElementById('search-input').value.toLowerCase().trim();
       
       if (availableKeys.length === 0) {
-        container.innerHTML = `<div style="padding: 12px; text-align: center; color: var(--text-secondary);">No keys available. Connect to GitHub.</div>`;
+        const provider = document.getElementById('sync-provider').value;
+        const providerName = provider === 'github' ? 'GitHub' : 'Google Sheets';
+        container.innerHTML = `<div style="padding: 12px; text-align: center; color: var(--text-secondary);">No keys available. Connect to ${providerName}.</div>`;
         return;
       }
 
@@ -676,8 +727,27 @@
       return result;
     }
 
-    // Fetch latest commit metadata for version checking
-    async function fetchLatestCommit(isManual = false) {
+    // Helper to calculate a simple hash for change detection
+    function simpleHash(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = (hash << 5) - hash + char;
+        hash = hash & hash;
+      }
+      return Math.abs(hash).toString(16);
+    }
+
+    async function fetchLatestData(isManual = false) {
+      const provider = document.getElementById('sync-provider').value;
+      if (provider === 'github') {
+        await fetchLatestGithub(isManual);
+      } else {
+        await fetchLatestGoogleSheets(isManual);
+      }
+    }
+
+    async function fetchLatestGithub(isManual = false) {
       const repo = document.getElementById('gh-repo').value.trim();
       const filePath = document.getElementById('gh-path').value.trim();
       const branch = document.getElementById('gh-branch').value.trim() || 'main';
@@ -731,6 +801,7 @@
 
         // Compare commit SHA with currently synced doc SHA
         const banner = document.getElementById('update-alert-banner');
+        document.getElementById('alert-banner-title').textContent = '🆕 New copy version on GitHub!';
         if (latestCommitSha !== documentSha) {
           document.getElementById('alert-commit-msg').textContent = `"${commitMsg}"`;
           document.getElementById('alert-commit-meta').textContent = `By ${author} on ${commitDate}`;
@@ -742,6 +813,62 @@
         }
       } catch (err) {
         log(`GitHub Check Failed: ${err.message}`, 'warning');
+      }
+    }
+
+    async function fetchLatestGoogleSheets(isManual = false) {
+      const url = document.getElementById('gas-url').value.trim();
+      const token = document.getElementById('gas-token').value.trim();
+
+      if (!url) {
+        if (isManual) log("Please enter the Web App URL.", "warning");
+        return;
+      }
+
+      // Save credentials locally
+      try {
+        localStorage.setItem('copyflow-gas-url', url);
+        localStorage.setItem('copyflow-gas-token', token);
+      } catch (e) {}
+
+      if (isManual) log("Fetching from Google Sheets...", "info");
+
+      try {
+        // Construct URL with token
+        const fetchUrl = token ? `${url}?token=${encodeURIComponent(token)}` : url;
+        
+        const res = await fetch(fetchUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        
+        const data = await res.json();
+        
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        cachedCopyData = data;
+        availableKeys = Object.keys(cachedCopyData);
+        
+        updateVersionSelect(cachedCopyData);
+        renderKeysExplorer();
+
+        // Generate a pseudo-SHA from the data content
+        latestCommitSha = simpleHash(JSON.stringify(data));
+
+        // Compare pseudo-SHA with currently synced doc SHA
+        const banner = document.getElementById('update-alert-banner');
+        document.getElementById('alert-banner-title').textContent = '🆕 New copy version in Google Sheets!';
+        if (latestCommitSha !== documentSha) {
+          document.getElementById('alert-commit-msg').textContent = "Google Sheet content changed";
+          document.getElementById('alert-commit-meta').textContent = `Detected at ${new Date().toLocaleTimeString()}`;
+          banner.style.display = 'block';
+          if (isManual) log(`New copy version detected (Hash: ${latestCommitSha.substring(0, 7)})`, 'info');
+        } else {
+          banner.style.display = 'none';
+          if (isManual) log(`Figma is already up-to-date with Google Sheet (Hash: ${latestCommitSha.substring(0, 7)})`, 'success');
+        }
+      } catch (err) {
+        log(`Google Sheets Fetch Failed: ${err.message}`, 'warning');
       }
     }
 
@@ -855,7 +982,7 @@
 
       if (msg.type === 'sync-complete') {
         log(`Sync finished. Updated ${msg.updatedCount} layers. Warnings: ${msg.overflowCount}`, 'success');
-        fetchLatestCommit();
+        fetchLatestData();
       }
     };
 
