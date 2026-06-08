@@ -29,18 +29,20 @@ function fetchWithRedirects(urlStr, headers, callback, redirectCount = 0) {
         redirectUrl = `${parsedUrl.protocol}//${parsedUrl.host}${redirectUrl}`;
       }
       
-      // Strip Authorization header if redirecting to a different host (prevents 401s on Google sandbox subdomains)
+      // Strip Authorization and Cookie headers if redirecting to a different host (prevents 401s/session blocks on Google sandbox subdomains)
       const nextHeaders = { ...headers };
       try {
         const currentHost = new URL(urlStr).host;
         const nextHost = new URL(redirectUrl).host;
         if (currentHost !== nextHost) {
-          console.log(`[Fetch Hop ${redirectCount}] Host changed from ${currentHost} to ${nextHost}. Stripping Authorization header.`);
+          console.log(`[Fetch Hop ${redirectCount}] Host changed from ${currentHost} to ${nextHost}. Stripping Auth/Cookie headers.`);
           delete nextHeaders['Authorization'];
+          delete nextHeaders['Cookie'];
         }
       } catch (e) {
         // Fallback if URL parsing fails
         delete nextHeaders['Authorization'];
+        delete nextHeaders['Cookie'];
       }
       
       fetchWithRedirects(redirectUrl, nextHeaders, callback, redirectCount + 1);
@@ -291,7 +293,11 @@ const server = http.createServer((req, res) => {
     
     const reqHeaders = {};
     if (oauthToken) {
-      reqHeaders['Authorization'] = `Bearer ${oauthToken}`;
+      if (oauthToken.includes('SACSID') || oauthToken.includes('OSID') || oauthToken.includes('Cookie:')) {
+        reqHeaders['Cookie'] = oauthToken.replace(/^Cookie:\s*/i, '');
+      } else {
+        reqHeaders['Authorization'] = `Bearer ${oauthToken}`;
+      }
     }
     
     fetchWithRedirects(fetchUrl, reqHeaders, (err, googleRes) => {
