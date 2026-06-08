@@ -4,6 +4,29 @@ const url = require('url');
 const fs = require('fs');
 const path = require('path');
 
+// Helper to recursively follow HTTP redirects (max 5 hops)
+function fetchWithRedirects(urlStr, callback, redirectCount = 0) {
+  if (redirectCount > 5) {
+    callback(new Error("Too many redirects"));
+    return;
+  }
+  
+  https.get(urlStr, (res) => {
+    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+      let redirectUrl = res.headers.location;
+      if (!redirectUrl.startsWith('http')) {
+        const parsedUrl = new URL(urlStr);
+        redirectUrl = `${parsedUrl.protocol}//${parsedUrl.host}${redirectUrl}`;
+      }
+      fetchWithRedirects(redirectUrl, callback, redirectCount + 1);
+    } else {
+      callback(null, res);
+    }
+  }).on('error', (err) => {
+    callback(err);
+  });
+}
+
 // Simple manual dotenv loader to load environment variables from local .env file
 const envPath = path.join(__dirname, '.env');
 if (fs.existsSync(envPath)) {
@@ -222,6 +245,35 @@ const server = http.createServer((req, res) => {
   const pathName = parsedUrl.pathname;
   const sheetId = parsedUrl.query.sheetId || "18T7m-9xT_d2hKkU5Fk6q5p_rYQp77_O5zS5a417u7B0";
   const apiKey = parsedUrl.query.key || GOOGLE_API_KEY;
+
+  if (pathName === '/api/sheets-proxy') {
+    const targetUrl = parsedUrl.query.url;
+    const token = parsedUrl.query.token;
+    
+    if (!targetUrl) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: { message: "Missing url parameter" } }));
+      return;
+    }
+    
+    const fetchUrl = token ? `${targetUrl}?token=${encodeURIComponent(token)}` : targetUrl;
+    
+    fetchWithRedirects(fetchUrl, (err, googleRes) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: { message: err.message } }));
+        return;
+      }
+      
+      let data = '';
+      googleRes.on('data', (chunk) => { data += chunk; });
+      googleRes.on('end', () => {
+        res.writeHead(googleRes.statusCode, { 'Content-Type': 'application/json' });
+        res.end(data);
+      });
+    });
+    return;
+  }
 
   if (pathName === '/api/copy') {
     let googleUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&_t=${Date.now()}`;

@@ -838,10 +838,13 @@
       if (isManual) log("Fetching from Google Sheets...", "info");
 
       try {
-        // Construct URL with token
-        const fetchUrl = token ? `${url}?token=${encodeURIComponent(token)}` : url;
+        // Route request through local proxy server to bypass sandboxed iframe CORS redirect blocks
+        let proxyUrl = `http://localhost:3000/api/sheets-proxy?url=${encodeURIComponent(url)}`;
+        if (token) {
+          proxyUrl += `&token=${encodeURIComponent(token)}`;
+        }
         
-        const res = await fetch(fetchUrl);
+        const res = await fetch(proxyUrl);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         
         const data = await res.json();
