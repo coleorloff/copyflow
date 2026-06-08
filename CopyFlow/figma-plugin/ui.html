@@ -108,6 +108,13 @@
       transform: scale(0.98);
     }
 
+    .btn:disabled {
+      background-color: var(--border);
+      color: var(--text-secondary);
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
     .btn-secondary {
       background-color: transparent;
       border: 1px solid var(--border);
@@ -151,7 +158,6 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
       overflow-y: auto;
-      margin-top: 4px;
     }
 
     .log-line {
@@ -251,36 +257,37 @@
     <label>CSV File Path</label>
     <input type="text" id="gh-path" value="CopyFlow/data/copy.csv" placeholder="e.g. data/copy.csv">
 
-    <div class="flex-row">
-      <div style="flex: 2;">
-        <label>Branch</label>
-        <input type="text" id="gh-branch" value="main" placeholder="e.g. main" style="margin-bottom: 0;">
-      </div>
-      <div style="flex: 1.2;">
-        <label>&nbsp;</label>
-        <button id="btn-refresh" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 0;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-          Check GitHub
-        </button>
-      </div>
-    </div>
+    <label>Branch</label>
+    <input type="text" id="gh-branch" value="main" placeholder="e.g. main">
 
-    <label style="margin-top: 10px;">GitHub Access Token</label>
+    <label>GitHub Access Token</label>
     <input type="password" id="gh-token" value="" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+
+    <button id="btn-refresh" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; font-weight: 600; border-color: var(--primary); color: var(--primary); margin-top: 8px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+      Connect & Fetch Latest
+    </button>
   </div>
 
-  <!-- Staging and Sync actions (At the very top) -->
-  <div class="card" style="padding: 10px; margin-bottom: 12px;">
-    <div style="display: flex; gap: 8px; align-items: center;">
-      <div style="flex: 1; display: flex; flex-direction: column;">
-        <select id="version-select" style="margin-bottom: 0; height: 32px; padding: 4px 8px;">
+  <!-- Actions Card (At the very top) -->
+  <div class="card" style="padding: 12px; margin-bottom: 12px;">
+    <div style="display: flex; gap: 8px; flex-direction: column;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 11px; font-weight: 500; color: var(--text-secondary); width: 80px;">Version:</span>
+        <select id="version-select" style="margin-bottom: 0; height: 32px; padding: 4px 8px; flex: 1;">
           <option value="">No versions loaded</option>
         </select>
       </div>
-      <button id="btn-sync" class="btn" style="flex: 1.1; height: 32px; padding: 0; font-size: 12px; gap: 4px;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-        Sync to Figma
-      </button>
+      <div style="display: flex; gap: 8px; margin-top: 4px;">
+        <button id="btn-sync" class="btn" style="flex: 1; height: 32px; padding: 0; font-size: 12px; gap: 4px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          Sync All Layers
+        </button>
+        <button id="btn-sync-selected" class="btn btn-secondary" style="flex: 1.1; height: 32px; padding: 0; font-size: 12px; gap: 4px; border-color: var(--border);" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Sync Selected Only
+        </button>
+      </div>
     </div>
   </div>
 
@@ -292,23 +299,24 @@
     <button id="btn-sync-now" class="btn" style="background: white; color: #b45309; font-weight: 600; padding: 6px 12px; font-size: 11px; width: auto; display: inline-flex;">Sync Now</button>
   </div>
 
-  <!-- Current Selection Info Panel -->
-  <div id="selection-status-bar" class="card" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;">
-    <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex-grow: 1; margin-right: 8px;">
-      <span style="color: var(--text-secondary);">Selected:</span> 
-      <span id="selected-layer-name" style="font-weight:600; overflow: hidden; text-overflow: ellipsis;">None</span>
-      <span id="selected-layer-match-badge" class="key-status unbound" style="display:none; padding: 1px 6px;">Unmatched</span>
-    </div>
-    <button id="btn-unbind" class="btn btn-secondary" style="width: auto; padding: 2px 8px; font-size: 11px; display: none; height: 24px; border-radius: 4px; line-height: 1.2;" title="Reset layer name to raw characters">Reset Name</button>
-  </div>
-
-  <!-- Key Explorer Card -->
-  <div class="card" style="padding-bottom: 8px; margin-bottom: 8px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+  <!-- Key Explorer Card (with selection and unbind built-in) -->
+  <div class="card" style="padding-bottom: 8px; margin-bottom: 12px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <label style="margin-bottom: 0;">Copy Key Explorer</label>
       <button id="btn-keys-toggle" class="btn-secondary" style="border: none; padding: 2px 6px; font-size: 11px; border-radius: 4px;">Hide</button>
     </div>
+    
     <div id="explorer-body">
+      <!-- Embedded Canvas Selection Status -->
+      <div id="selection-status-bar" style="background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex-grow: 1; margin-right: 8px;">
+          <span style="color: var(--text-secondary); font-size: 11px;">Selected:</span> 
+          <span id="selected-layer-name" style="font-weight:600; font-size: 11px; overflow: hidden; text-overflow: ellipsis;">None</span>
+          <span id="selected-layer-match-badge" class="key-status unbound" style="display:none; padding: 1px 5px; font-size: 9px;">Unmatched</span>
+        </div>
+        <button id="btn-unbind" class="btn btn-secondary" style="width: auto; padding: 2px 6px; font-size: 10px; display: none; height: 20px; border-radius: 4px; line-height: 1;" title="Reset layer name to raw characters">Reset Name</button>
+      </div>
+
       <input type="text" id="search-input" placeholder="🔍 Search copy keys..." style="margin-bottom: 0;">
       <div id="keys-list" class="keys-list-container">
         <div class="log-line log-info" style="padding: 12px; text-align: center;">Loading keys...</div>
@@ -316,13 +324,15 @@
     </div>
   </div>
 
-  <!-- Realtime Console Log -->
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; margin-bottom: 4px;">
-    <label style="margin-bottom: 0;">Activity Log</label>
-    <button id="btn-console-toggle" class="btn-secondary" style="border: none; padding: 2px 6px; font-size: 11px; border-radius: 4px;">Hide</button>
-  </div>
-  <div class="console" id="console">
-    <div class="log-line log-info">CopyFlow loaded. Waiting for commands...</div>
+  <!-- Realtime Console Log Card (Aligned) -->
+  <div class="card" style="padding-bottom: 14px; margin-bottom: 12px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <label style="margin-bottom: 0;">Activity Log</label>
+      <button id="btn-console-toggle" class="btn-secondary" style="border: none; padding: 2px 6px; font-size: 11px; border-radius: 4px;">Hide</button>
+    </div>
+    <div class="console" id="console">
+      <div class="log-line log-info">CopyFlow loaded. Waiting for commands...</div>
+    </div>
   </div>
 
   <script>
@@ -352,7 +362,7 @@
       console.warn("localStorage is blocked in this sandbox:", e.message);
     }
 
-    // Toggle settings panel with active status coloring
+    // Toggle settings panel
     document.getElementById('btn-settings-toggle').addEventListener('click', () => {
       const panel = document.getElementById('settings-panel');
       const btn = document.getElementById('btn-settings-toggle');
@@ -367,7 +377,7 @@
       const btn = document.getElementById('btn-keys-toggle');
       const isHidden = getComputedStyle(body).display === 'none';
       body.style.display = isHidden ? 'block' : 'none';
-      btn.textContent = isHidden ? 'Show' : 'Hide';
+      btn.textContent = isHidden ? 'Hide' : 'Show';
     });
 
     // Toggle console panel
@@ -376,7 +386,7 @@
       const btn = document.getElementById('btn-console-toggle');
       const isHidden = getComputedStyle(logBox).display === 'none';
       logBox.style.display = isHidden ? 'block' : 'none';
-      btn.textContent = isHidden ? 'Show' : 'Hide';
+      btn.textContent = isHidden ? 'Hide' : 'Show';
     });
 
     // Auto-fetch/check when Repo or Path inputs change
@@ -384,7 +394,7 @@
     document.getElementById('gh-path').addEventListener('change', () => fetchLatestCommit());
     document.getElementById('gh-branch').addEventListener('change', () => fetchLatestCommit());
 
-    // Manual Refresh button
+    // Connect & Fetch Latest button
     document.getElementById('btn-refresh').addEventListener('click', () => {
       fetchLatestCommit(true);
     });
@@ -396,7 +406,7 @@
 
     // Sync Now banner action
     document.getElementById('btn-sync-now').addEventListener('click', () => {
-      performSync();
+      performSync(true);
     });
 
     // Reset Name button action
@@ -456,9 +466,11 @@
       });
     }
 
-    // Update dynamic version options in dropdown select
+    // Update dynamic version options in dropdown select without losing selection
     function updateVersionSelect(parsedCopyData) {
       const select = document.getElementById('version-select');
+      const previousValue = select.value;
+
       select.innerHTML = '';
       
       const keys = Object.keys(parsedCopyData);
@@ -479,6 +491,11 @@
         opt.textContent = v;
         select.appendChild(opt);
       });
+
+      // Re-assign previous selected version if it is still present in newly loaded data
+      if (previousValue && versions.includes(previousValue)) {
+        select.value = previousValue;
+      }
     }
 
     // Robust RFC 4180 CSV parser
@@ -661,8 +678,8 @@
       return parseCsv(csvText);
     }
 
-    // Trigger standard sync flow
-    async function performSync() {
+    // Trigger standard sync flow (syncAll specifies Sync All vs Sync Selected Node)
+    async function performSync(syncAll = true) {
       const selectedVersion = document.getElementById('version-select').value;
       if (!selectedVersion) {
         log("No version selected or available to sync.", "warning");
@@ -676,14 +693,19 @@
           type: 'sync-layers',
           copyData: cachedCopyData,
           stage: selectedVersion,
-          sha: latestCommitSha
+          sha: latestCommitSha,
+          syncAll: syncAll
         }
       }, '*');
     }
 
-    // Sync button trigger
+    // Sync button triggers
     document.getElementById('btn-sync').addEventListener('click', () => {
-      performSync();
+      performSync(true);
+    });
+
+    document.getElementById('btn-sync-selected').addEventListener('click', () => {
+      performSync(false);
     });
 
     // Message handler from Figma main thread
@@ -695,6 +717,7 @@
         const selectedLayerName = document.getElementById('selected-layer-name');
         const selectedLayerMatchBadge = document.getElementById('selected-layer-match-badge');
         const unbindBtn = document.getElementById('btn-unbind');
+        const btnSyncSelected = document.getElementById('btn-sync-selected');
 
         boundKeysList = msg.boundKeys || [];
         documentSha = msg.lastSyncedSha || "";
@@ -713,6 +736,7 @@
           selectedNodeId = msg.nodeId;
           selectedLayerName.textContent = msg.nodeName;
           unbindBtn.style.display = "inline-block";
+          btnSyncSelected.removeAttribute('disabled');
           
           // Check if selected layer's name matches a key from the spreadsheet
           const hasMatch = availableKeys.includes(msg.nodeName);
@@ -730,6 +754,7 @@
           selectedLayerName.textContent = "None";
           selectedLayerMatchBadge.style.display = "none";
           unbindBtn.style.display = "none";
+          btnSyncSelected.setAttribute('disabled', 'true');
         }
       }
 
