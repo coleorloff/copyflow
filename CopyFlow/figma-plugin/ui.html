@@ -274,10 +274,10 @@
 
     <div id="google-sheets-settings-group" style="display: none;">
       <label>Web App URL</label>
-      <input type="text" id="gas-url" value="" placeholder="https://script.google.com/macros/s/.../exec">
+      <input type="text" id="gas-url" value="https://script.google.com/a/macros/google.com/s/AKfycbysI7sy4-hhK3kp-WbNbar7B8K7BjT_jP3GWxfTe6Y_vsT_UySWLL-7hiyeW4notEat/exec" placeholder="https://script.google.com/macros/s/.../exec">
 
       <label>Secret Access Token</label>
-      <input type="password" id="gas-token" value="" placeholder="Enter secret token">
+      <input type="password" id="gas-token" value="CopyFlowSecret2026" placeholder="Enter secret token">
     </div>
 
     <button id="btn-refresh" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; font-weight: 600; border-color: var(--primary); color: var(--primary); margin-top: 8px;">
@@ -369,7 +369,7 @@
 
     // Load configurations safely from localStorage
     try {
-      const provider = localStorage.getItem('copyflow-sync-provider') || 'github';
+      const provider = localStorage.getItem('copyflow-sync-provider') || 'google-sheets';
       document.getElementById('sync-provider').value = provider;
       updateProviderSettingsVisibility(provider);
 
@@ -387,9 +387,13 @@
       }
       if (localStorage.getItem('copyflow-gas-url')) {
         document.getElementById('gas-url').value = localStorage.getItem('copyflow-gas-url');
+      } else {
+        document.getElementById('gas-url').value = "https://script.google.com/a/macros/google.com/s/AKfycbysI7sy4-hhK3kp-WbNbar7B8K7BjT_jP3GWxfTe6Y_vsT_UySWLL-7hiyeW4notEat/exec";
       }
       if (localStorage.getItem('copyflow-gas-token')) {
         document.getElementById('gas-token').value = localStorage.getItem('copyflow-gas-token');
+      } else {
+        document.getElementById('gas-token').value = "CopyFlowSecret2026";
       }
     } catch (e) {
       console.warn("localStorage is blocked in this sandbox:", e.message);
