@@ -83,7 +83,7 @@ figma.ui.onmessage = async (msg) => {
   }
 
   if (msg.type === "sync-layers") {
-    const { copyData, stage, sha } = msg; // stage can be 'draft' or 'approved'
+    const { copyData, stage, sha } = msg; // stage holds the selected version column name (e.g. 'Copy V1')
     const textNodes = figma.currentPage.findAll(node => node.type === "TEXT");
     
     let updatedCount = 0;
@@ -93,7 +93,8 @@ figma.ui.onmessage = async (msg) => {
       // Look up key strictly by layer name
       const key = node.name;
       if (key && copyData[key]) {
-        const newText = copyData[key][stage] || copyData[key].draft || "";
+        // Fetch matching copy from versions object
+        const newText = (copyData[key].versions && copyData[key].versions[stage]) ? copyData[key].versions[stage] : "";
         
         try {
           // Load font before editing characters

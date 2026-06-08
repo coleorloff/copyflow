@@ -132,31 +132,6 @@
       margin-bottom: 0;
     }
 
-    .stage-selector {
-      display: flex;
-      background: var(--input-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 2px;
-    }
-
-    .stage-option {
-      flex: 1;
-      text-align: center;
-      padding: 6px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 500;
-      color: var(--text-secondary);
-      transition: all 0.2s;
-      white-space: nowrap;
-    }
-
-    .stage-option.active {
-      background: var(--primary);
-      color: white;
-    }
-
     .console {
       height: 240px;
       background: var(--input-bg);
@@ -287,9 +262,10 @@
   <!-- Staging and Sync actions (At the very top) -->
   <div class="card" style="padding: 10px; margin-bottom: 12px;">
     <div style="display: flex; gap: 8px; align-items: center;">
-      <div class="stage-selector" style="flex: 1;">
-        <div class="stage-option active" data-stage="draft">Draft</div>
-        <div class="stage-option" data-stage="approved">Approved</div>
+      <div style="flex: 1; display: flex; flex-direction: column;">
+        <select id="version-select" style="margin-bottom: 0; height: 32px; padding: 4px 8px;">
+          <option value="">No versions loaded</option>
+        </select>
       </div>
       <button id="btn-sync" class="btn" style="flex: 1.1; height: 32px; padding: 0; font-size: 12px; gap: 4px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
@@ -318,27 +294,35 @@
 
   <!-- Key Explorer Card -->
   <div class="card" style="padding-bottom: 8px; margin-bottom: 8px;">
-    <label>Copy Key Explorer</label>
-    <input type="text" id="search-input" placeholder="🔍 Search copy keys..." style="margin-bottom: 0;">
-    <div id="keys-list" class="keys-list-container">
-      <div class="log-line log-info" style="padding: 12px; text-align: center;">Loading keys...</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+      <label style="margin-bottom: 0;">Copy Key Explorer</label>
+      <button id="btn-keys-toggle" class="btn-secondary" style="border: none; padding: 2px 6px; font-size: 11px; border-radius: 4px;">Hide</button>
+    </div>
+    <div id="explorer-body">
+      <input type="text" id="search-input" placeholder="🔍 Search copy keys..." style="margin-bottom: 0;">
+      <div id="keys-list" class="keys-list-container">
+        <div class="log-line log-info" style="padding: 12px; text-align: center;">Loading keys...</div>
+      </div>
     </div>
   </div>
 
   <!-- Realtime Console Log -->
-  <label>Activity Log</label>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; margin-bottom: 4px;">
+    <label style="margin-bottom: 0;">Activity Log</label>
+    <button id="btn-console-toggle" class="btn-secondary" style="border: none; padding: 2px 6px; font-size: 11px; border-radius: 4px;">Hide</button>
+  </div>
   <div class="console" id="console">
     <div class="log-line log-info">CopyFlow loaded. Waiting for commands...</div>
   </div>
 
   <script>
-    let activeStage = 'draft';
     let selectedNodeId = null;
     let availableKeys = []; // Array of string keys parsed from GitHub CSV
     let boundKeysList = []; // Array of string keys bound in Figma (all text layer names)
     
     let documentSha = "";     // Last synced SHA stored in Figma document metadata
     let latestCommitSha = "";  // Newest SHA fetched from GitHub
+    let cachedCopyData = {};   // Cached parsed CSV data
 
     // Load configurations safely from localStorage
     try {
@@ -365,15 +349,22 @@
       panel.style.display = isVisible ? 'none' : 'block';
     });
 
-    // Tab Switcher
-    const options = document.querySelectorAll('.stage-option');
-    options.forEach(opt => {
-      opt.addEventListener('click', () => {
-        options.forEach(o => o.classList.remove('active'));
-        opt.classList.add('active');
-        activeStage = opt.dataset.stage;
-        log(`Switched view target to "${activeStage.toUpperCase()}"`, 'info');
-      });
+    // Toggle explorer panel
+    document.getElementById('btn-keys-toggle').addEventListener('click', () => {
+      const body = document.getElementById('explorer-body');
+      const btn = document.getElementById('btn-keys-toggle');
+      const isHidden = body.style.display === 'none';
+      body.style.display = isHidden ? 'none' : 'block';
+      btn.textContent = isHidden ? 'Show' : 'Hide';
+    });
+
+    // Toggle console panel
+    document.getElementById('btn-console-toggle').addEventListener('click', () => {
+      const logBox = document.getElementById('console');
+      const btn = document.getElementById('btn-console-toggle');
+      const isHidden = logBox.style.display === 'none';
+      logBox.style.display = isHidden ? 'none' : 'block';
+      btn.textContent = isHidden ? 'Show' : 'Hide';
     });
 
     // Auto-fetch/check when Repo or Path inputs change
@@ -437,7 +428,7 @@
         
         item.innerHTML = `
           <div class="key-name" title="${escapeHtml(key)}">${escapeHtml(key)}</div>
-          <span class="key-status ${isBound ? 'bound' : 'unbound'}" style="display:${isBound ? 'inline-block' : 'none'};">${isBound ? 'Bound' : ''}</span>
+          <span class="key-status bound" style="display:${isBound ? 'inline-block' : 'none'};">Matched</span>
         `;
         
         // Click to rename selected element to this key
@@ -450,6 +441,31 @@
         });
         
         container.appendChild(item);
+      });
+    }
+
+    // Update dynamic version options in dropdown select
+    function updateVersionSelect(parsedCopyData) {
+      const select = document.getElementById('version-select');
+      select.innerHTML = '';
+      
+      const keys = Object.keys(parsedCopyData);
+      if (keys.length === 0) {
+        select.innerHTML = '<option value="">No versions loaded</option>';
+        return;
+      }
+      
+      const versions = Object.keys(parsedCopyData[keys[0]].versions);
+      if (versions.length === 0) {
+        select.innerHTML = '<option value="">No version columns</option>';
+        return;
+      }
+
+      versions.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        select.appendChild(opt);
       });
     }
 
@@ -507,9 +523,15 @@
       
       const headers = rows[0].map(h => h.toLowerCase().trim());
       const keyIdx = headers.indexOf('key');
-      const draftIdx = headers.indexOf('draft');
-      const approvedIdx = headers.indexOf('approved');
       const limitIdx = headers.indexOf('character limit');
+
+      // Identify dynamic version headers (columns that aren't key, character limit, or context)
+      const versionHeaders = [];
+      headers.forEach((h, idx) => {
+        if (idx !== keyIdx && idx !== limitIdx && h !== 'context' && h !== '') {
+          versionHeaders.push({ name: rows[0][idx], index: idx });
+        }
+      });
 
       if (keyIdx === -1) {
         log("CSV is missing a 'Key' column header.", "warning");
@@ -521,14 +543,17 @@
         const key = row[keyIdx];
         if (!key) continue;
 
-        const draft = draftIdx !== -1 && row[draftIdx] ? row[draftIdx] : "";
-        const approved = approvedIdx !== -1 && row[approvedIdx] ? row[approvedIdx] : "";
         const limit = limitIdx !== -1 && row[limitIdx] ? row[limitIdx] : "";
+        
+        // Map dynamic version headers to this key
+        const versions = {};
+        versionHeaders.forEach(vh => {
+          versions[vh.name] = row[vh.index] || "";
+        });
 
         result[key] = {
-          draft,
-          approved,
-          characterLimit: limit
+          characterLimit: limit,
+          versions: versions
         };
       }
       return result;
@@ -580,9 +605,11 @@
         const author = latestCommit.commit.author.name;
         const commitDate = new Date(latestCommit.commit.author.date).toLocaleString();
 
-        // Download CSV file to parse keys
-        const copyData = await downloadCopyFile(repo, filePath, branch, token);
-        availableKeys = Object.keys(copyData);
+        // Download CSV file to parse keys & update dynamic versions select
+        cachedCopyData = await downloadCopyFile(repo, filePath, branch, token);
+        availableKeys = Object.keys(cachedCopyData);
+        
+        updateVersionSelect(cachedCopyData);
         renderKeysExplorer();
 
         // Compare commit SHA with currently synced doc SHA
@@ -624,27 +651,22 @@
 
     // Trigger standard sync flow
     async function performSync() {
-      const repo = document.getElementById('gh-repo').value.trim();
-      const filePath = document.getElementById('gh-path').value.trim();
-      const branch = document.getElementById('gh-branch').value.trim() || 'main';
-      const token = document.getElementById('gh-token').value.trim();
-
-      log("Downloading latest copy from GitHub...", "info");
-      try {
-        const copyData = await downloadCopyFile(repo, filePath, branch, token);
-        log("Copy downloaded. Syncing layers...", "success");
-
-        parent.postMessage({
-          pluginMessage: {
-            type: 'sync-layers',
-            copyData,
-            stage: activeStage,
-            sha: latestCommitSha
-          }
-        }, '*');
-      } catch (err) {
-        log(`Sync failed: ${err.message}`, "warning");
+      const selectedVersion = document.getElementById('version-select').value;
+      if (!selectedVersion) {
+        log("No version selected or available to sync.", "warning");
+        return;
       }
+
+      log(`Syncing version "${selectedVersion}" to layers...`, "info");
+      
+      parent.postMessage({
+        pluginMessage: {
+          type: 'sync-layers',
+          copyData: cachedCopyData,
+          stage: selectedVersion,
+          sha: latestCommitSha
+        }
+      }, '*');
     }
 
     // Sync button trigger
