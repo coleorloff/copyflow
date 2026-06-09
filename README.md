@@ -1,36 +1,13 @@
-# CopyFlow: Figma-Google Sheets Copy Sync Tool (MVP State)
+# Cole's Jetski Experiments
 
-> [!NOTE]
-> This folder structure preserves the **CopyFlow MVP (Minimum Viable Product)** state. All features are fully functional and dependency-free.
+Welcome to my digital sandbox. If you're looking for production-ready, bulletproof, highly-optimized enterprise architecture... you've taken a very wrong turn.
 
----
+Here, we adhere to a strict protocol:
+1. **Experiment**: Write code first, ask questions later (or vice versa), and watch things break in spectacular ways.
+2. **Explore**: Try out fresh tool ideas, build rapid prototypes, and test concepts to see what actually sticks.
+3. **Play**: Build things purely for the joy of it. Logic and safety regulations are optional.
 
-## 📁 Repository Structure
+Think of this as a playground for tooling and tech. If a tool works, it actually gets used. If it doesn't, it's called "art."
 
-All MVP files have been organized into the **[CopyFlow/](file:///Users/corloff/_dev_land/cole-jetski-experiments/CopyFlow/)** directory:
+*Proceed with caution, wear a helmet, and please don't touch the live wires.*
 
-*   **[CopyFlow/figma-plugin/](file:///Users/corloff/_dev_land/cole-jetski-experiments/CopyFlow/figma-plugin/)**: Figma plugin code (manifest, controller, and interactive explorer UI).
-*   **[CopyFlow/server/](file:///Users/corloff/_dev_land/cole-jetski-experiments/CopyFlow/server/)**: Pure Node.js local proxy server fetching Google Sheets data.
-
----
-
-## 🚀 Running the MVP
-
-### 1. Start the Server
-Run the dependency-free Node server:
-```bash
-cd CopyFlow/server
-node server.js
-```
-The server will run on `http://localhost:3000`.
-
-### 2. Load the Plugin in Figma
-1. Open the Figma desktop app (or Figma web version).
-2. Go to **Plugins -> Development -> Import plugin from manifest...**.
-3. Select the `manifest.json` file in [CopyFlow/figma-plugin/manifest.json](file:///Users/corloff/_dev_land/cole-jetski-experiments/CopyFlow/figma-plugin/manifest.json).
-
-### 3. Sync & Bind Keys
-*   Select a Text Layer in Figma.
-*   Type or search for a copy key in the plugin panel.
-*   Click the key in the **Copy Key Explorer** list to instantly bind it.
-*   Enter your Sheet ID (shared as *Anyone with link can view*) and click **Sync to Figma**.
